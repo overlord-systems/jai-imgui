@@ -26,33 +26,17 @@ DECLARATIONS_TO_OMIT :: string.[
     root_options := get_build_options();
     args := root_options.compile_time_command_line;
 
-    has_backends := false;
-    for args {
-        if begins_with(it, "-backend_") {
-            has_backends = true;
-            break;
-        }
-    }
 
-    compile := array_find(args, "-compile");
-    compile_debug := array_find(args, "-debug");
-
-    // @TODO: Doing two bindings in one go causes an assert in bindings generator,
-    // so for now we do one at a time depending on flags.
-    if has_backends {
-        if !generate_imgui_backend_bindings(args, compile=compile, compile_debug=compile_debug) {
-            compiler_set_workspace_status(.FAILED);
-        }
-    } else {
-        if !generate_imgui_bindings(args) {
-            compiler_set_workspace_status(.FAILED);
-        }
+    if !generate_imgui_bindings(args) {
+        compiler_set_workspace_status(.FAILED);
     }
 }
 
-generate_imgui_bindings :: (args: [] string, compile: bool, compile_debug: bool) -> bool {
+generate_imgui_bindings :: (args: [] string) -> bool {
 
     no_demo := array_find(args, "-no_demo");
+    compile := array_find(args, "-compile");
+    compile_debug := array_find(args, "-debug");
 
     if compile {
         imgui_src_files: [..] string;
@@ -161,176 +145,8 @@ EOF
     return success;
 }
 
-generate_imgui_backend_bindings :: (args: [] string, compile: bool, compile_debug: bool) -> bool {
-
-    make_directory_if_it_does_not_exist("backends");
-
-    backend_sdl3 := array_find(args, "-backend_sdl3");
-    backend_sdl3_gpu3 := array_find(args, "-backend_sdl3_gpu3");
-
-    has_backends := backend_sdl3 || backend_sdl3_gpu3;
-    if !has_backends return false;
-
-    if backend_sdl3 {
-        array_add(*backends_sdl_names_to_allow,
-            "SDL_Window",
-            "SDL_Renderer",
-            "SDL_Gamepad",
-            "SDL_Event",
-        );
-    }
-
-    if backend_sdl3_gpu3 {
-        array_add(*backends_sdl_prefixes_to_allow,
-            "SDL_GPU",
-        );
-    }
-
-    if compile {
-
-        imgui_src_files: [..] string;
-
-        if backend_sdl3 {
-            array_add(*imgui_src_files, tprint("%/backends/imgui_impl_sdl3.cpp", IMGUI_PATH));
-        }
-
-        if backend_sdl3_gpu3 {
-            array_add(*imgui_src_files, tprint("%/backends/imgui_impl_sdlgpu3.cpp", IMGUI_PATH));
-        }
-
-        // @TODO: macos/linux have NOT been tested. We only have their paths updated, but whether that is enough is another question.
-        success := true;
-        #if OS == .WINDOWS {
-
-            make_directory_if_it_does_not_exist("backends/windows");
-
-            success &&= build_cpp_dynamic_lib("backends/windows/ImGui_backends", ..imgui_src_files, extra = .["/DIMGUI_API=__declspec(dllexport)"], debug=compile_debug);
-
-            // We set IMGUI_DISABLE_WIN32_DEFAULT_IME_FUNCTIONS. Otherwise all users of the ImGui module have to link against "imm32".
-            success &&= build_cpp_static_lib("backends/windows/ImGui_backends.static", ..imgui_src_files, extra = .["/DIMGUI_API=__declspec(dllexport)", "/DIMGUI_DISABLE_WIN32_DEFAULT_IME_FUNCTIONS"], debug=compile_debug);
-
-        } else #if OS == .LINUX {
-            make_directory_if_it_does_not_exist("backends/linux");
-            success &&= build_cpp_dynamic_lib("backends/linux/ImGui_backends", ..imgui_src_files, debug=compile_debug);
-            // @Hack: Is -fno-threadsafe-statics really the way to go? Without it, we get linker errors when using the static library
-            // due to "__cxa_guard_acquire" et al not being defined. The library users probably need to link agains libc++ or something. But do we really want to enforce that?
-            success &&= build_cpp_static_lib("backends/linux/ImGui_backends", ..imgui_src_files, extra = .["-fno-exceptions", "-fno-rtti", "-fno-threadsafe-statics", "-fPIC"], debug=compile_debug);
-        } else #if OS == .MACOS {
-            #import "Process";
-            make_directory_if_it_does_not_exist("backends/macos_backends");
-            macos_x64_version_arg   := "-mmacos-version-min=10.13"; // Our current x64 min version
-            macos_arm64_version_arg := "-mmacos-version-min=11.0";  // Earliest version that supports arm64
-            // x64 variant
-            success &&= build_cpp_dynamic_lib("backends/macos/ImGui_x64_backends",   ..imgui_src_files, extra = .["-arch", "x86_64", "-std=c++20", macos_x64_version_arg], debug=compile_debug);
-            // @Hack: Is -fno-threadsafe-statics really the way to go? Without it, we get linker errors when using the static library
-            // due to "__cxa_guard_acquire" et al not being defined. The library users probably need to link agains libc++ or something. But do we really want to enforce that?
-            success &&= build_cpp_static_lib( "backends/macos/ImGui_x64_backends",   ..imgui_src_files, extra = .["-arch", "x86_64", "-std=c++20", "-fno-exceptions", "-fno-rtti", "-fno-threadsafe-statics", macos_x64_version_arg], debug=compile_debug);
-            // arm64 variant
-            success &&= build_cpp_dynamic_lib("backends/macos/ImGui_arm64_backends", ..imgui_src_files, extra = .["-arch", "arm64",  "-std=c++20", macos_arm64_version_arg], debug=compile_debug);
-            success &&= build_cpp_static_lib( "backends/macos/ImGui_arm64_backends", ..imgui_src_files, extra = .["-arch", "arm64",  "-std=c++20", "-fno-exceptions", "-fno-rtti", "-fno-threadsafe-statics", macos_arm64_version_arg], debug=compile_debug);
-            // create universal binaries
-            run_result := run_command("lipo", "-create", "backends/macos/ImGui_x64_backends.dylib", "macos/ImGui_arm64.dylib", "-output", "macos/ImGui.dylib");
-            success &&= (run_result.exit_code == 0);
-            run_result =  run_command("lipo", "-create", "backends/macos/ImGui_x64_backends.a", "macos/ImGui_arm64.a", "-output", "macos/ImGui.a");
-            success &&= (run_result.exit_code == 0);
-        } else {
-            assert(false);
-        }
-
-        if !success return false;
-    }
-
-    init(*enums_for_typedefs);
-    defer {
-        deinit(*enums_for_typedefs);
-        array_reset(*begin_end_string_args);
-    }
-
-    output_filename: string;
-    opts: Generate_Bindings_Options;
-    {
-        using opts;
-
-        #if OS == .WINDOWS {
-            array_add(*libpaths, "backends/windows");
-            output_filename = "backends/windows/windows.jai";
-            generate_library_declarations = false;
-
-            footer = #string EOF
-#if USE_DYNAMIC_LIB {
-    imgui :: #library "ImGui_backends";
-} else {
-    imgui :: #library,no_dll "ImGui_backends.static";
-}
-EOF
-
-        } else {
-            #if OS == .LINUX {
-                array_add(*libpaths, "backends/linux");
-            } else #if OS == .MACOS {
-                array_add(*libpaths, "backends/macos");
-            } else {
-                assert(false);
-            }
-            output_filename = "backends/unix.jai";
-            generate_library_declarations = false;
-            footer = FOOTER_BACKENDS_UNIX;
-        }
-
-        array_add(*libnames,      "ImGui");
-        array_add(*include_paths, IMGUI_PATH);
-        array_add(*source_files,  tprint("%/imgui.h", IMGUI_PATH));
-        array_add(*extra_clang_arguments, "-x", "c++", "-DWIN32_LEAN_AND_MEAN");
-        array_add(*flatten_namespaces, "ImGui");
-        array_add(*strip_prefixes, "ImGui");
-
-        auto_detect_enum_prefixes = false;
-        log_stripped_declarations = false;
-        generate_compile_time_struct_checks = false;
-        strip_flags |= .INLINED_FUNCTIONS; // "inline" functions are not present in the static library.
-
-        visitor   = imgui_backends_visitor;
-        get_func_args_for_printing = imgui_get_function_arg_for_printing;
-    }
-
-    success := generate_bindings(opts, output_filename);
-    return success;
-}
-
 begin_end_string_args: [..]*Declaration;
 enums_for_typedefs: Table(string, *Enum);
-
-backends_sdl_names_to_allow: [..]string;
-backends_sdl_prefixes_to_allow: [..]string;
-
-imgui_backends_visitor :: (decl: *Declaration, parent_decl: *Declaration) -> Declaration_Visit_Result {
-
-    if begins_with(decl.name, "SDL_") {
-
-        found := false;
-
-        // Check prefixes
-        for prefix: backends_sdl_prefixes_to_allow {
-            if begins_with(decl.name, prefix) {
-                found = true;
-                break;
-            }
-        }
-
-        // Check names
-        if !found && array_find(backends_sdl_names_to_allow, decl.name) {
-            found = true;
-        }
-
-        // Decide whether to ignore
-        if !found {
-            decl.decl_flags |= .OMIT_FROM_OUTPUT;
-            return .STOP;
-        }
-    }
-
-    return imgui_visitor(decl, parent_decl);
-}
 
 imgui_visitor :: (decl: *Declaration, parent_decl: *Declaration) -> Declaration_Visit_Result {
 

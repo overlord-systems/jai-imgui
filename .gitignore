@@ -40,3 +40,4 @@ config.dev.json
 **/.build/
 *.pdb
 *.rdi
+*.exp
