@@ -1,13 +1,13 @@
 //
 // This file was auto-generated using the following command:
 //
-// jai generate.jai - -backend_sdl3_gpu3
+// jai generate.jai - -compile
 //
 
 
 
-IMGUI_VERSION :: "1.91.9b";
-IMGUI_VERSION_NUM :: 19191;
+IMGUI_VERSION :: "1.92.0 WIP";
+IMGUI_VERSION_NUM :: 19196;
 
 IMGUI_PAYLOAD_TYPE_COLOR_3F :: "_COL3F";
 IMGUI_PAYLOAD_TYPE_COLOR_4F :: "_COL4F";
@@ -568,10 +568,12 @@ IsWindowCollapsed :: () -> bool #foreign imgui "?IsWindowCollapsed@ImGui@@YA_NXZ
 IsWindowFocused :: (flags: FocusedFlags = .None) -> bool #foreign imgui "?IsWindowFocused@ImGui@@YA_NH@Z";
 IsWindowHovered :: (flags: HoveredFlags = .None) -> bool #foreign imgui "?IsWindowHovered@ImGui@@YA_NH@Z";
 GetWindowDrawList :: () -> *ImDrawList #foreign imgui "?GetWindowDrawList@ImGui@@YAPEAUImDrawList@@XZ";
+GetWindowDpiScale :: () -> float #foreign imgui "?GetWindowDpiScale@ImGui@@YAMXZ";
 GetWindowPos :: () -> ImVec2 #cpp_return_type_is_non_pod #foreign imgui "?GetWindowPos@ImGui@@YA?AUImVec2@@XZ";
 GetWindowSize :: () -> ImVec2 #cpp_return_type_is_non_pod #foreign imgui "?GetWindowSize@ImGui@@YA?AUImVec2@@XZ";
 GetWindowWidth :: () -> float #foreign imgui "?GetWindowWidth@ImGui@@YAMXZ";
 GetWindowHeight :: () -> float #foreign imgui "?GetWindowHeight@ImGui@@YAMXZ";
+GetWindowViewport :: () -> *Viewport #foreign imgui "?GetWindowViewport@ImGui@@YAPEAUImGuiViewport@@XZ";
 
 // Window manipulation
 // - Prefer using SetNextXXX functions (before Begin) rather that SetXXX functions (after Begin).
@@ -598,6 +600,7 @@ SetNextWindowScroll :: (scroll: ImVec2) #no_context {
     SetNextWindowScroll(*scroll);
 }
 SetNextWindowBgAlpha :: (alpha: float) -> void #foreign imgui "?SetNextWindowBgAlpha@ImGui@@YAXM@Z";
+SetNextWindowViewport :: (viewport_id: ID) -> void #foreign imgui "?SetNextWindowViewport@ImGui@@YAXI@Z";
 SetWindowPos :: (pos: *ImVec2, cond: Cond = .None) -> void #foreign imgui "?SetWindowPos@ImGui@@YAXAEBUImVec2@@H@Z";
 SetWindowPos :: (pos: ImVec2, cond: Cond = .None) #no_context {
     SetWindowPos(*pos, cond);
@@ -1036,7 +1039,7 @@ IsItemToggledSelection :: () -> bool #foreign imgui "?IsItemToggledSelection@ImG
 // - This is essentially a thin wrapper to using BeginChild/EndChild with the ImGuiChildFlags_FrameStyle flag for stylistic changes + displaying a label.
 // - If you don't need a label you can probably simply use BeginChild() with the ImGuiChildFlags_FrameStyle flag for the same result.
 // - You can submit contents and manage your selection state however you want it, by creating e.g. Selectable() or any other items.
-// - The simplified/old ListBox() api are helpers over BeginListBox()/EndListBox() which are kept available for convenience purpose. This is analoguous to how Combos are created.
+// - The simplified/old ListBox() api are helpers over BeginListBox()/EndListBox() which are kept available for convenience purpose. This is analogous to how Combos are created.
 // - Choose frame width:   size.x > 0.0f: custom  /  size.x < 0.0f or -FLT_MIN: right-align   /  size.x = 0.0f (default): use current ItemWidth
 // - Choose frame height:  size.y > 0.0f: custom  /  size.y < 0.0f or -FLT_MIN: bottom-align  /  size.y = 0.0f (default): arbitrary default height which can fit ~7 items
 BeginListBox :: (label: *u8, size: *ImVec2) -> bool #foreign imgui "?BeginListBox@ImGui@@YA_NPEBDAEBUImVec2@@@Z";
@@ -1228,6 +1231,29 @@ EndTabItem :: () -> void #foreign imgui "?EndTabItem@ImGui@@YAXXZ";
 TabItemButton :: (label: *u8, flags: TabItemFlags = .None) -> bool #foreign imgui "?TabItemButton@ImGui@@YA_NPEBDH@Z";
 SetTabItemClosed :: (tab_or_docked_window_label: *u8) -> void #foreign imgui "?SetTabItemClosed@ImGui@@YAXPEBD@Z";
 
+// Docking
+// [BETA API] Enable with io.ConfigFlags |= ImGuiConfigFlags_DockingEnable.
+// Note: You can use most Docking facilities without calling any API. You DO NOT need to call DockSpace() to use Docking!
+// - Drag from window title bar or their tab to dock/undock. Hold SHIFT to disable docking.
+// - Drag from window menu button (upper-left button) to undock an entire node (all windows).
+// - When io.ConfigDockingWithShift == true, you instead need to hold SHIFT to enable docking.
+// About dockspaces:
+// - Use DockSpaceOverViewport() to create a window covering the screen or a specific viewport + a dockspace inside it.
+//   This is often used with ImGuiDockNodeFlags_PassthruCentralNode to make it transparent.
+// - Use DockSpace() to create an explicit dock node _within_ an existing window. See Docking demo for details.
+// - Important: Dockspaces need to be submitted _before_ any window they can host. Submit it early in your frame!
+// - Important: Dockspaces need to be kept alive if hidden, otherwise windows docked into it will be undocked.
+//   e.g. if you have multiple tabs with a dockspace inside each tab: submit the non-visible dockspaces with ImGuiDockNodeFlags_KeepAliveOnly.
+DockSpace :: (dockspace_id: ID, size: *ImVec2, flags: DockNodeFlags = .None, window_class: *WindowClass = null) -> ID #foreign imgui "?DockSpace@ImGui@@YAIIAEBUImVec2@@HPEBUImGuiWindowClass@@@Z";
+DockSpace :: (dockspace_id: ID, size: ImVec2 = ImVec2.{0, 0}, flags: DockNodeFlags = .None, window_class: *WindowClass = null) -> ID #no_context {
+    return DockSpace(dockspace_id, *size, flags, window_class);
+}
+DockSpaceOverViewport :: (dockspace_id: ID = 0, viewport: *Viewport = null, flags: DockNodeFlags = .None, window_class: *WindowClass = null) -> ID #foreign imgui "?DockSpaceOverViewport@ImGui@@YAIIPEBUImGuiViewport@@HPEBUImGuiWindowClass@@@Z";
+SetNextWindowDockID :: (dock_id: ID, cond: Cond = .None) -> void #foreign imgui "?SetNextWindowDockID@ImGui@@YAXIH@Z";
+SetNextWindowClass :: (window_class: *WindowClass) -> void #foreign imgui "?SetNextWindowClass@ImGui@@YAXPEBUImGuiWindowClass@@@Z";
+GetWindowDockID :: () -> ID #foreign imgui "?GetWindowDockID@ImGui@@YAIXZ";
+IsWindowDocked :: () -> bool #foreign imgui "?IsWindowDocked@ImGui@@YA_NXZ";
+
 // Logging/Capture
 // - All text output from the interface can be captured into tty/file/clipboard. By default, tree nodes are automatically opened during logging.
 LogToTTY :: (auto_open_depth: s32 = -1) -> void #foreign imgui "?LogToTTY@ImGui@@YAXH@Z";
@@ -1312,8 +1338,8 @@ GetItemRectSize :: () -> ImVec2 #cpp_return_type_is_non_pod #foreign imgui "?Get
 GetMainViewport :: () -> *Viewport #foreign imgui "?GetMainViewport@ImGui@@YAPEAUImGuiViewport@@XZ";
 
 // Background/Foreground Draw Lists
-GetBackgroundDrawList :: () -> *ImDrawList #foreign imgui "?GetBackgroundDrawList@ImGui@@YAPEAUImDrawList@@XZ";
-GetForegroundDrawList :: () -> *ImDrawList #foreign imgui "?GetForegroundDrawList@ImGui@@YAPEAUImDrawList@@XZ";
+GetBackgroundDrawList :: (viewport: *Viewport = null) -> *ImDrawList #foreign imgui "?GetBackgroundDrawList@ImGui@@YAPEAUImDrawList@@PEAUImGuiViewport@@@Z";
+GetForegroundDrawList :: (viewport: *Viewport = null) -> *ImDrawList #foreign imgui "?GetForegroundDrawList@ImGui@@YAPEAUImDrawList@@PEAUImGuiViewport@@@Z";
 
 // Miscellaneous Utilities
 IsRectVisible :: (size: *ImVec2) -> bool #foreign imgui "?IsRectVisible@ImGui@@YA_NAEBUImVec2@@@Z";
@@ -1449,6 +1475,15 @@ GetAllocatorFunctions :: (p_alloc_func: *MemAllocFunc, p_free_func: *MemFreeFunc
 MemAlloc :: (size: u64) -> *void #foreign imgui "?MemAlloc@ImGui@@YAPEAX_K@Z";
 MemFree :: (ptr: *void) -> void #foreign imgui "?MemFree@ImGui@@YAXPEAX@Z";
 
+// (Optional) Platform/OS interface for multi-viewport support
+// Read comments around the ImGuiPlatformIO structure for more details.
+// Note: You may use GetWindowViewport() to get the current viewport of the current window.
+UpdatePlatformWindows :: () -> void #foreign imgui "?UpdatePlatformWindows@ImGui@@YAXXZ";
+RenderPlatformWindowsDefault :: (platform_render_arg: *void = null, renderer_render_arg: *void = null) -> void #foreign imgui "?RenderPlatformWindowsDefault@ImGui@@YAXPEAX0@Z";
+DestroyPlatformWindows :: () -> void #foreign imgui "?DestroyPlatformWindows@ImGui@@YAXXZ";
+FindViewportByID :: (id: ID) -> *Viewport #foreign imgui "?FindViewportByID@ImGui@@YAPEAUImGuiViewport@@I@Z";
+FindViewportByPlatformHandle :: (platform_handle: *void) -> *Viewport #foreign imgui "?FindViewportByPlatformHandle@ImGui@@YAPEAUImGuiViewport@@PEAX@Z";
+
 // OBSOLETED in 1.91.9 (from February 2025)
 Image :: (user_texture_id: ImTextureID, image_size: *ImVec2, uv0: *ImVec2, uv1: *ImVec2, tint_col: *ImVec4, border_col: *ImVec4) -> void #foreign imgui "?Image@ImGui@@YAX_KAEBUImVec2@@11AEBUImVec4@@2@Z";
 Image :: (user_texture_id: ImTextureID, image_size: ImVec2, uv0: ImVec2, uv1: ImVec2, tint_col: ImVec4, border_col: ImVec4) #no_context {
@@ -1488,10 +1523,12 @@ WindowFlags :: enum_flags s32 {
     NoNavInputs               :: 0x10000;
     NoNavFocus                :: 0x20000;
     UnsavedDocument           :: 0x40000;
+    NoDocking                 :: 0x80000;
     NoNav                     :: 0x30000;
     NoDecoration              :: 0x2b;
     NoInputs                  :: 0x30200;
 
+    DockNodeHost              :: 0x800000;
     ChildWindow               :: 0x1000000;
     Tooltip                   :: 0x2000000;
     Popup                     :: 0x4000000;
@@ -1521,10 +1558,12 @@ WindowFlags :: enum_flags s32 {
     ImGuiWindowFlags_NoNavInputs               :: NoNavInputs;
     ImGuiWindowFlags_NoNavFocus                :: NoNavFocus;
     ImGuiWindowFlags_UnsavedDocument           :: UnsavedDocument;
+    ImGuiWindowFlags_NoDocking                 :: NoDocking;
     ImGuiWindowFlags_NoNav                     :: NoNav;
     ImGuiWindowFlags_NoDecoration              :: NoDecoration;
     ImGuiWindowFlags_NoInputs                  :: NoInputs;
 
+    ImGuiWindowFlags_DockNodeHost              :: DockNodeHost;
     ImGuiWindowFlags_ChildWindow               :: ChildWindow;
     ImGuiWindowFlags_Tooltip                   :: Tooltip;
     ImGuiWindowFlags_Popup                     :: Popup;
@@ -1676,11 +1715,16 @@ TreeNodeFlags :: enum_flags s32 {
     SpanAllColumns       :: 0x4000;
     LabelSpanAllColumns  :: 0x8000;
 
-    NavLeftJumpsBackHere :: 0x20000;
+    NavLeftJumpsToParent :: 0x20000;
     CollapsingHeader     :: 0x1a;
 
-    AllowItemOverlap     :: 0x4;
+    DrawLinesNone        :: 0x40000;
+    DrawLinesFull        :: 0x80000;
+    DrawLinesToNodes     :: 0x100000;
+
+    NavLeftJumpsBackHere :: 0x20000;
     SpanTextWidth        :: 0x2000;
+    AllowItemOverlap     :: 0x4;
 
     ImGuiTreeNodeFlags_None                 :: None;
     ImGuiTreeNodeFlags_Selected             :: Selected;
@@ -1700,11 +1744,16 @@ TreeNodeFlags :: enum_flags s32 {
     ImGuiTreeNodeFlags_SpanAllColumns       :: SpanAllColumns;
     ImGuiTreeNodeFlags_LabelSpanAllColumns  :: LabelSpanAllColumns;
 
-    ImGuiTreeNodeFlags_NavLeftJumpsBackHere :: NavLeftJumpsBackHere;
+    ImGuiTreeNodeFlags_NavLeftJumpsToParent :: NavLeftJumpsToParent;
     ImGuiTreeNodeFlags_CollapsingHeader     :: CollapsingHeader;
 
-    ImGuiTreeNodeFlags_AllowItemOverlap     :: AllowItemOverlap;
+    ImGuiTreeNodeFlags_DrawLinesNone        :: DrawLinesNone;
+    ImGuiTreeNodeFlags_DrawLinesFull        :: DrawLinesFull;
+    ImGuiTreeNodeFlags_DrawLinesToNodes     :: DrawLinesToNodes;
+
+    ImGuiTreeNodeFlags_NavLeftJumpsBackHere :: NavLeftJumpsBackHere;
     ImGuiTreeNodeFlags_SpanTextWidth        :: SpanTextWidth;
+    ImGuiTreeNodeFlags_AllowItemOverlap     :: AllowItemOverlap;
 }
 
 // Flags for OpenPopup*(), BeginPopupContext*(), IsPopupOpen() functions.
@@ -1856,7 +1905,7 @@ FocusedFlags :: enum_flags s32 {
     RootWindow          :: 0x2;
     AnyWindow           :: 0x4;
     NoPopupHierarchy    :: 0x8;
-
+    DockHierarchy       :: 0x10;
     RootAndChildWindows :: 0x3;
 
     ImGuiFocusedFlags_None                :: None;
@@ -1864,7 +1913,7 @@ FocusedFlags :: enum_flags s32 {
     ImGuiFocusedFlags_RootWindow          :: RootWindow;
     ImGuiFocusedFlags_AnyWindow           :: AnyWindow;
     ImGuiFocusedFlags_NoPopupHierarchy    :: NoPopupHierarchy;
-
+    ImGuiFocusedFlags_DockHierarchy       :: DockHierarchy;
     ImGuiFocusedFlags_RootAndChildWindows :: RootAndChildWindows;
 }
 
@@ -1877,7 +1926,7 @@ HoveredFlags :: enum_flags s32 {
     RootWindow                   :: 0x2;
     AnyWindow                    :: 0x4;
     NoPopupHierarchy             :: 0x8;
-
+    DockHierarchy                :: 0x10;
     AllowWhenBlockedByPopup      :: 0x20;
 
     AllowWhenBlockedByActiveItem :: 0x80;
@@ -1902,7 +1951,7 @@ HoveredFlags :: enum_flags s32 {
     ImGuiHoveredFlags_RootWindow                   :: RootWindow;
     ImGuiHoveredFlags_AnyWindow                    :: AnyWindow;
     ImGuiHoveredFlags_NoPopupHierarchy             :: NoPopupHierarchy;
-
+    ImGuiHoveredFlags_DockHierarchy                :: DockHierarchy;
     ImGuiHoveredFlags_AllowWhenBlockedByPopup      :: AllowWhenBlockedByPopup;
 
     ImGuiHoveredFlags_AllowWhenBlockedByActiveItem :: AllowWhenBlockedByActiveItem;
@@ -1921,6 +1970,37 @@ HoveredFlags :: enum_flags s32 {
     ImGuiHoveredFlags_DelayShort                   :: DelayShort;
     ImGuiHoveredFlags_DelayNormal                  :: DelayNormal;
     ImGuiHoveredFlags_NoSharedDelay                :: NoSharedDelay;
+}
+
+// Flags for ImGui::DockSpace(), shared/inherited by child nodes.
+// (Some flags can be applied to individual nodes directly)
+// FIXME-DOCK: Also see ImGuiDockNodeFlagsPrivate_ which may involve using the WIP and internal DockBuilder api.
+DockNodeFlags :: enum_flags s32 {
+    None                     :: 0x0;
+    KeepAliveOnly            :: 0x1;
+
+    NoDockingOverCentralNode :: 0x4;
+    PassthruCentralNode      :: 0x8;
+    NoDockingSplit           :: 0x10;
+    NoResize                 :: 0x20;
+    AutoHideTabBar           :: 0x40;
+    NoUndocking              :: 0x80;
+
+    NoSplit                  :: 0x10;
+    NoDockingInCentralNode   :: 0x4;
+
+    ImGuiDockNodeFlags_None                     :: None;
+    ImGuiDockNodeFlags_KeepAliveOnly            :: KeepAliveOnly;
+
+    ImGuiDockNodeFlags_NoDockingOverCentralNode :: NoDockingOverCentralNode;
+    ImGuiDockNodeFlags_PassthruCentralNode      :: PassthruCentralNode;
+    ImGuiDockNodeFlags_NoDockingSplit           :: NoDockingSplit;
+    ImGuiDockNodeFlags_NoResize                 :: NoResize;
+    ImGuiDockNodeFlags_AutoHideTabBar           :: AutoHideTabBar;
+    ImGuiDockNodeFlags_NoUndocking              :: NoUndocking;
+
+    ImGuiDockNodeFlags_NoSplit                  :: NoSplit;
+    ImGuiDockNodeFlags_NoDockingInCentralNode   :: NoDockingInCentralNode;
 }
 
 // Flags for ImGui::BeginDragDropSource(), ImGui::AcceptDragDropPayload()
@@ -2030,46 +2110,66 @@ InputFlags :: enum_flags s32 {
 
 // Configuration flags stored in io.ConfigFlags. Set by user/application.
 ConfigFlags :: enum_flags s32 {
-    None                 :: 0x0;
-    NavEnableKeyboard    :: 0x1;
-    NavEnableGamepad     :: 0x2;
-    NoMouse              :: 0x10;
-    NoMouseCursorChange  :: 0x20;
-    NoKeyboard           :: 0x40;
+    None                    :: 0x0;
+    NavEnableKeyboard       :: 0x1;
+    NavEnableGamepad        :: 0x2;
+    NoMouse                 :: 0x10;
+    NoMouseCursorChange     :: 0x20;
+    NoKeyboard              :: 0x40;
 
-    IsSRGB               :: 0x100000;
-    IsTouchScreen        :: 0x200000;
+    DockingEnable           :: 0x80;
 
-    NavEnableSetMousePos :: 0x4;
-    NavNoCaptureKeyboard :: 0x8;
+    ViewportsEnable         :: 0x400;
+    DpiEnableScaleViewports :: 0x4000;
+    DpiEnableScaleFonts     :: 0x8000;
 
-    ImGuiConfigFlags_None                 :: None;
-    ImGuiConfigFlags_NavEnableKeyboard    :: NavEnableKeyboard;
-    ImGuiConfigFlags_NavEnableGamepad     :: NavEnableGamepad;
-    ImGuiConfigFlags_NoMouse              :: NoMouse;
-    ImGuiConfigFlags_NoMouseCursorChange  :: NoMouseCursorChange;
-    ImGuiConfigFlags_NoKeyboard           :: NoKeyboard;
+    IsSRGB                  :: 0x100000;
+    IsTouchScreen           :: 0x200000;
 
-    ImGuiConfigFlags_IsSRGB               :: IsSRGB;
-    ImGuiConfigFlags_IsTouchScreen        :: IsTouchScreen;
+    NavEnableSetMousePos    :: 0x4;
+    NavNoCaptureKeyboard    :: 0x8;
 
-    ImGuiConfigFlags_NavEnableSetMousePos :: NavEnableSetMousePos;
-    ImGuiConfigFlags_NavNoCaptureKeyboard :: NavNoCaptureKeyboard;
+    ImGuiConfigFlags_None                    :: None;
+    ImGuiConfigFlags_NavEnableKeyboard       :: NavEnableKeyboard;
+    ImGuiConfigFlags_NavEnableGamepad        :: NavEnableGamepad;
+    ImGuiConfigFlags_NoMouse                 :: NoMouse;
+    ImGuiConfigFlags_NoMouseCursorChange     :: NoMouseCursorChange;
+    ImGuiConfigFlags_NoKeyboard              :: NoKeyboard;
+
+    ImGuiConfigFlags_DockingEnable           :: DockingEnable;
+
+    ImGuiConfigFlags_ViewportsEnable         :: ViewportsEnable;
+    ImGuiConfigFlags_DpiEnableScaleViewports :: DpiEnableScaleViewports;
+    ImGuiConfigFlags_DpiEnableScaleFonts     :: DpiEnableScaleFonts;
+
+    ImGuiConfigFlags_IsSRGB                  :: IsSRGB;
+    ImGuiConfigFlags_IsTouchScreen           :: IsTouchScreen;
+
+    ImGuiConfigFlags_NavEnableSetMousePos    :: NavEnableSetMousePos;
+    ImGuiConfigFlags_NavNoCaptureKeyboard    :: NavNoCaptureKeyboard;
 }
 
 // Backend capabilities flags stored in io.BackendFlags. Set by imgui_impl_xxx or custom backend.
 BackendFlags :: enum_flags s32 {
-    None                 :: 0x0;
-    HasGamepad           :: 0x1;
-    HasMouseCursors      :: 0x2;
-    HasSetMousePos       :: 0x4;
-    RendererHasVtxOffset :: 0x8;
+    None                    :: 0x0;
+    HasGamepad              :: 0x1;
+    HasMouseCursors         :: 0x2;
+    HasSetMousePos          :: 0x4;
+    RendererHasVtxOffset    :: 0x8;
 
-    ImGuiBackendFlags_None                 :: None;
-    ImGuiBackendFlags_HasGamepad           :: HasGamepad;
-    ImGuiBackendFlags_HasMouseCursors      :: HasMouseCursors;
-    ImGuiBackendFlags_HasSetMousePos       :: HasSetMousePos;
-    ImGuiBackendFlags_RendererHasVtxOffset :: RendererHasVtxOffset;
+    PlatformHasViewports    :: 0x400;
+    HasMouseHoveredViewport :: 0x800;
+    RendererHasViewports    :: 0x1000;
+
+    ImGuiBackendFlags_None                    :: None;
+    ImGuiBackendFlags_HasGamepad              :: HasGamepad;
+    ImGuiBackendFlags_HasMouseCursors         :: HasMouseCursors;
+    ImGuiBackendFlags_HasSetMousePos          :: HasSetMousePos;
+    ImGuiBackendFlags_RendererHasVtxOffset    :: RendererHasVtxOffset;
+
+    ImGuiBackendFlags_PlatformHasViewports    :: PlatformHasViewports;
+    ImGuiBackendFlags_HasMouseHoveredViewport :: HasMouseHoveredViewport;
+    ImGuiBackendFlags_RendererHasViewports    :: RendererHasViewports;
 }
 
 // Enumeration for PushStyleColor() / PopStyleColor()
@@ -2107,35 +2207,39 @@ Col :: enum s32 {
     ResizeGrip                :: 30;
     ResizeGripHovered         :: 31;
     ResizeGripActive          :: 32;
-    TabHovered                :: 33;
-    Tab                       :: 34;
-    TabSelected               :: 35;
-    TabSelectedOverline       :: 36;
-    TabDimmed                 :: 37;
-    TabDimmedSelected         :: 38;
-    TabDimmedSelectedOverline :: 39;
-    PlotLines                 :: 40;
-    PlotLinesHovered          :: 41;
-    PlotHistogram             :: 42;
-    PlotHistogramHovered      :: 43;
-    TableHeaderBg             :: 44;
-    TableBorderStrong         :: 45;
-    TableBorderLight          :: 46;
-    TableRowBg                :: 47;
-    TableRowBgAlt             :: 48;
-    TextLink                  :: 49;
-    TextSelectedBg            :: 50;
-    DragDropTarget            :: 51;
-    NavCursor                 :: 52;
-    NavWindowingHighlight     :: 53;
-    NavWindowingDimBg         :: 54;
-    ModalWindowDimBg          :: 55;
-    COUNT                     :: 56;
+    InputTextCursor           :: 33;
+    TabHovered                :: 34;
+    Tab                       :: 35;
+    TabSelected               :: 36;
+    TabSelectedOverline       :: 37;
+    TabDimmed                 :: 38;
+    TabDimmedSelected         :: 39;
+    TabDimmedSelectedOverline :: 40;
+    DockingPreview            :: 41;
+    DockingEmptyBg            :: 42;
+    PlotLines                 :: 43;
+    PlotLinesHovered          :: 44;
+    PlotHistogram             :: 45;
+    PlotHistogramHovered      :: 46;
+    TableHeaderBg             :: 47;
+    TableBorderStrong         :: 48;
+    TableBorderLight          :: 49;
+    TableRowBg                :: 50;
+    TableRowBgAlt             :: 51;
+    TextLink                  :: 52;
+    TextSelectedBg            :: 53;
+    TreeLines                 :: 54;
+    DragDropTarget            :: 55;
+    NavCursor                 :: 56;
+    NavWindowingHighlight     :: 57;
+    NavWindowingDimBg         :: 58;
+    ModalWindowDimBg          :: 59;
+    COUNT                     :: 60;
 
-    TabActive                 :: 35;
-    TabUnfocused              :: 37;
-    TabUnfocusedActive        :: 38;
-    NavHighlight              :: 52;
+    TabActive                 :: 36;
+    TabUnfocused              :: 38;
+    TabUnfocusedActive        :: 39;
+    NavHighlight              :: 56;
 
     ImGuiCol_Text                      :: Text;
     ImGuiCol_TextDisabled              :: TextDisabled;
@@ -2170,6 +2274,7 @@ Col :: enum s32 {
     ImGuiCol_ResizeGrip                :: ResizeGrip;
     ImGuiCol_ResizeGripHovered         :: ResizeGripHovered;
     ImGuiCol_ResizeGripActive          :: ResizeGripActive;
+    ImGuiCol_InputTextCursor           :: InputTextCursor;
     ImGuiCol_TabHovered                :: TabHovered;
     ImGuiCol_Tab                       :: Tab;
     ImGuiCol_TabSelected               :: TabSelected;
@@ -2177,6 +2282,8 @@ Col :: enum s32 {
     ImGuiCol_TabDimmed                 :: TabDimmed;
     ImGuiCol_TabDimmedSelected         :: TabDimmedSelected;
     ImGuiCol_TabDimmedSelectedOverline :: TabDimmedSelectedOverline;
+    ImGuiCol_DockingPreview            :: DockingPreview;
+    ImGuiCol_DockingEmptyBg            :: DockingEmptyBg;
     ImGuiCol_PlotLines                 :: PlotLines;
     ImGuiCol_PlotLinesHovered          :: PlotLinesHovered;
     ImGuiCol_PlotHistogram             :: PlotHistogram;
@@ -2188,6 +2295,7 @@ Col :: enum s32 {
     ImGuiCol_TableRowBgAlt             :: TableRowBgAlt;
     ImGuiCol_TextLink                  :: TextLink;
     ImGuiCol_TextSelectedBg            :: TextSelectedBg;
+    ImGuiCol_TreeLines                 :: TreeLines;
     ImGuiCol_DragDropTarget            :: DragDropTarget;
     ImGuiCol_NavCursor                 :: NavCursor;
     ImGuiCol_NavWindowingHighlight     :: NavWindowingHighlight;
@@ -2239,12 +2347,15 @@ StyleVar :: enum s32 {
     TabBarOverlineSize          :: 26;
     TableAngledHeadersAngle     :: 27;
     TableAngledHeadersTextAlign :: 28;
-    ButtonTextAlign             :: 29;
-    SelectableTextAlign         :: 30;
-    SeparatorTextBorderSize     :: 31;
-    SeparatorTextAlign          :: 32;
-    SeparatorTextPadding        :: 33;
-    COUNT                       :: 34;
+    TreeLinesSize               :: 29;
+    TreeLinesRounding           :: 30;
+    ButtonTextAlign             :: 31;
+    SelectableTextAlign         :: 32;
+    SeparatorTextBorderSize     :: 33;
+    SeparatorTextAlign          :: 34;
+    SeparatorTextPadding        :: 35;
+    DockingSeparatorSize        :: 36;
+    COUNT                       :: 37;
 
     ImGuiStyleVar_Alpha                       :: Alpha;
     ImGuiStyleVar_DisabledAlpha               :: DisabledAlpha;
@@ -2275,11 +2386,14 @@ StyleVar :: enum s32 {
     ImGuiStyleVar_TabBarOverlineSize          :: TabBarOverlineSize;
     ImGuiStyleVar_TableAngledHeadersAngle     :: TableAngledHeadersAngle;
     ImGuiStyleVar_TableAngledHeadersTextAlign :: TableAngledHeadersTextAlign;
+    ImGuiStyleVar_TreeLinesSize               :: TreeLinesSize;
+    ImGuiStyleVar_TreeLinesRounding           :: TreeLinesRounding;
     ImGuiStyleVar_ButtonTextAlign             :: ButtonTextAlign;
     ImGuiStyleVar_SelectableTextAlign         :: SelectableTextAlign;
     ImGuiStyleVar_SeparatorTextBorderSize     :: SeparatorTextBorderSize;
     ImGuiStyleVar_SeparatorTextAlign          :: SeparatorTextAlign;
     ImGuiStyleVar_SeparatorTextPadding        :: SeparatorTextPadding;
+    ImGuiStyleVar_DockingSeparatorSize        :: DockingSeparatorSize;
     ImGuiStyleVar_COUNT                       :: COUNT;
 }
 
@@ -2753,6 +2867,9 @@ Style :: struct {
     TabBarOverlineSize:               float; // Thickness of tab-bar overline, which highlights the selected tab-bar.
     TableAngledHeadersAngle:          float; // Angle of angled headers (supported values range from -50.0f degrees to +50.0f degrees).
     TableAngledHeadersTextAlign:      ImVec2; // Alignment of angled headers within the cell
+    TreeLinesFlags:                   TreeNodeFlags; // Default way to draw lines connecting TreeNode hierarchy. ImGuiTreeNodeFlags_DrawLinesNone or ImGuiTreeNodeFlags_DrawLinesFull or ImGuiTreeNodeFlags_DrawLinesToNodes.
+    TreeLinesSize:                    float; // Thickness of outlines when using ImGuiTreeNodeFlags_DrawLines.
+    TreeLinesRounding:                float; // Radius of lines connecting child nodes to the vertical line.
     ColorButtonPosition:              Dir; // Side of the color button in the ColorEdit4 widget (left/right). Defaults to ImGuiDir_Right.
     ButtonTextAlign:                  ImVec2; // Alignment of button text when button is larger than text. Defaults to (0.5f, 0.5f) (centered).
     SelectableTextAlign:              ImVec2; // Alignment of selectable text. Defaults to (0.0f, 0.0f) (top-left aligned). It's generally important to keep this left-aligned if you want to lay multiple items on a same line.
@@ -2761,6 +2878,7 @@ Style :: struct {
     SeparatorTextPadding:             ImVec2; // Horizontal offset of text from each edge of the separator + spacing on other axis. Generally small values. .y is recommended to be == FramePadding.y.
     DisplayWindowPadding:             ImVec2; // Apply to regular windows: amount which we enforce to keep visible when moving near edges of your screen.
     DisplaySafeAreaPadding:           ImVec2; // Apply to every windows, menus, popups, tooltips: amount where we avoid displaying contents. Adjust if you cannot see the edges of your screen (e.g. on a TV where scaling has not been configured).
+    DockingSeparatorSize:             float; // Thickness of resizing border between docked windows
     MouseCursorScale:                 float; // Scale software rendered mouse cursor (when io.MouseDrawCursor is enabled). We apply per-monitor DPI scaling over this scale. May be removed later.
     AntiAliasedLines:                 bool; // Enable anti-aliased lines/borders. Disable if you are really tight on CPU/GPU. Latched at the beginning of the frame (copied to ImDrawList).
     AntiAliasedLinesUseTex:           bool; // Enable anti-aliased lines/borders using textures where possible. Require backend to render with bilinear filtering (NOT point/nearest filtering). Latched at the beginning of the frame (copied to ImDrawList).
@@ -2769,7 +2887,7 @@ Style :: struct {
     CircleTessellationMaxError:       float; // Maximum error (in pixels) allowed when using AddCircle()/AddCircleFilled() or drawing rounded corner rectangles with no explicit segment count specified. Decrease for higher quality but more geometry.
 
     // Colors
-    Colors:                           [56] ImVec4;
+    Colors:                           [60] ImVec4;
 
     HoverStationaryDelay:             float; // Delay for IsItemHovered(ImGuiHoveredFlags_Stationary). Time required to consider mouse stationary.
     HoverDelayShort:                  float; // Delay for IsItemHovered(ImGuiHoveredFlags_DelayShort). Usually used along with HoverStationaryDelay.
@@ -2793,7 +2911,8 @@ KeyData :: struct {
 IO :: struct {
     ConfigFlags_:                                  ConfigFlags; // = 0              // See ImGuiConfigFlags_ enum. Set by user/application. Keyboard/Gamepad navigation options, etc.
     BackendFlags_:                                 BackendFlags; // = 0              // See ImGuiBackendFlags_ enum. Set by backend (imgui_impl_xxx files or custom backend) to communicate features supported by the backend.
-    DisplaySize:                                   ImVec2; // <unset>          // Main display size, in pixels (generally == GetMainViewport()->Size). May change every frame.
+    DisplaySize:                                   ImVec2; // <unset>          // Main display size, in pixels (== GetMainViewport()->Size). May change every frame.
+    DisplayFramebufferScale:                       ImVec2; // = (1, 1)         // Main display density. For retina display where window coordinates are different from framebuffer coordinates. This generally ends up in ImDrawData::FramebufferScale.
     DeltaTime:                                     float; // = 1.0f/60.0f     // Time elapsed since last frame, in seconds. May change every frame.
     IniSavingRate:                                 float; // = 5.0f           // Minimum time between saving positions/sizes to .ini file, in seconds.
     IniFilename:                                   *u8; // = "imgui.ini"    // Path to .ini file (important: default "imgui.ini" is relative to current working dir!). Set NULL to disable automatic .ini loading/saving or if you want to manually call LoadIniSettingsXXX() / SaveIniSettingsXXX() functions.
@@ -2804,7 +2923,6 @@ IO :: struct {
     FontGlobalScale:                               float; // = 1.0f           // Global scale all fonts
     FontAllowUserScaling:                          bool; // = false          // [OBSOLETE] Allow user scaling text of individual window with CTRL+Wheel.
     FontDefault:                                   *ImFont; // = NULL           // Font to use on NewFrame(). Use NULL to uses Fonts->Fonts[0].
-    DisplayFramebufferScale:                       ImVec2; // = (1, 1)         // For retina display or other situations where window coordinates are different from framebuffer coordinates. This generally ends up in ImDrawData::FramebufferScale.
 
     ConfigNavSwapGamepadButtons:                   bool; // = false          // Swap Activate<>Cancel (A<>B) buttons, matching typical "Nintendo/Japanese style" gamepad layout.
     ConfigNavMoveSetMousePos:                      bool; // = false          // Directional/tabbing navigation teleports the mouse cursor. May be useful on TV/console systems where moving a virtual mouse is difficult. Will update io.MousePos and set io.WantSetMousePos=true.
@@ -2813,6 +2931,16 @@ IO :: struct {
     ConfigNavEscapeClearFocusWindow:               bool; // = false          // Pressing Escape can clear focused window as well (super set of io.ConfigNavEscapeClearFocusItem).
     ConfigNavCursorVisibleAuto:                    bool; // = true           // Using directional navigation key makes the cursor visible. Mouse click hides the cursor.
     ConfigNavCursorVisibleAlways:                  bool; // = false          // Navigation cursor is always visible.
+
+    ConfigDockingNoSplit:                          bool; // = false          // Simplified docking mode: disable window splitting, so docking is limited to merging multiple windows together into tab-bars.
+    ConfigDockingWithShift:                        bool; // = false          // Enable docking with holding Shift key (reduce visual noise, allows dropping in wider space)
+    ConfigDockingAlwaysTabBar:                     bool; // = false          // [BETA] [FIXME: This currently creates regression with auto-sizing and general overhead] Make every single floating window display within a docking node.
+    ConfigDockingTransparentPayload:               bool; // = false          // [BETA] Make window or viewport transparent when docking and only display docking boxes on the target viewport. Useful if rendering of multiple viewport cannot be synced. Best used with ConfigViewportsNoAutoMerge.
+
+    ConfigViewportsNoAutoMerge:                    bool; // = false;         // Set to make all floating imgui windows always create their own viewport. Otherwise, they are merged into the main host viewports when overlapping it. May also set ImGuiViewportFlags_NoAutoMerge on individual viewport.
+    ConfigViewportsNoTaskBarIcon:                  bool; // = false          // Disable default OS task bar icon flag for secondary viewports. When a viewport doesn't want a task bar icon, ImGuiViewportFlags_NoTaskBarIcon will be set on it.
+    ConfigViewportsNoDecoration:                   bool; // = true           // Disable default OS window decoration flag for secondary viewports. When a viewport doesn't want window decorations, ImGuiViewportFlags_NoDecoration will be set on it. Enabling decoration can create subsequent issues at OS levels (e.g. minimum window size).
+    ConfigViewportsNoDefaultParent:                bool; // = false          // Disable default OS parenting to main viewport for secondary viewports. By default, viewports are marked with ParentViewportId = <main_viewport>, expecting the platform backend to setup a parent/child relationship between the OS windows (some backend may ignore this). Set to true if you want the default to be 0, then all viewports will be top-level OS windows.
 
     MouseDrawCursor:                               bool; // = false          // Request ImGui to draw a mouse cursor for you (if you are on a platform without a mouse cursor). Cannot be easily renamed to 'io.ConfigXXX' because this is frequently used by backend implementations.
     ConfigMacOSXBehaviors:                         bool; // = defined(__APPLE__) // Swap Cmd<>Ctrl keys + OS X style text editing cursor movement using Alt instead of Ctrl, Shortcuts using Cmd/Super instead of Ctrl, Line/Text Start and End using Cmd+Arrows instead of Home/End, Double click selects by word instead of selecting whole text, Multi-selection in lists uses Cmd/Super instead of Ctrl.
@@ -2862,6 +2990,7 @@ IO :: struct {
     AddMouseButtonEvent :: (this: *IO, button: s32, down: bool) -> void #cpp_method #foreign imgui "?AddMouseButtonEvent@ImGuiIO@@QEAAXH_N@Z";
     AddMouseWheelEvent :: (this: *IO, wheel_x: float, wheel_y: float) -> void #cpp_method #foreign imgui "?AddMouseWheelEvent@ImGuiIO@@QEAAXMM@Z";
     AddMouseSourceEvent :: (this: *IO, source: MouseSource) -> void #cpp_method #foreign imgui "?AddMouseSourceEvent@ImGuiIO@@QEAAXW4ImGuiMouseSource@@@Z";
+    AddMouseViewportEvent :: (this: *IO, id: ID) -> void #cpp_method #foreign imgui "?AddMouseViewportEvent@ImGuiIO@@QEAAXI@Z";
     AddFocusEvent :: (this: *IO, focused: bool) -> void #cpp_method #foreign imgui "?AddFocusEvent@ImGuiIO@@QEAAX_N@Z";
     AddInputCharacter :: (this: *IO, c: u32) -> void #cpp_method #foreign imgui "?AddInputCharacter@ImGuiIO@@QEAAXI@Z";
     AddInputCharacterUTF16 :: (this: *IO, c: ImWchar16) -> void #cpp_method #foreign imgui "?AddInputCharacterUTF16@ImGuiIO@@QEAAXG@Z";
@@ -2896,6 +3025,7 @@ IO :: struct {
     MouseWheel:                                    float; // Mouse wheel Vertical: 1 unit scrolls about 5 lines text. >0 scrolls Up, <0 scrolls Down. Hold SHIFT to turn vertical scroll into horizontal scroll.
     MouseWheelH:                                   float; // Mouse wheel Horizontal. >0 scrolls Left, <0 scrolls Right. Most users don't have a mouse with a horizontal wheel, may not be filled by all backends.
     MouseSource_:                                  MouseSource; // Mouse actual input peripheral (Mouse/TouchScreen/Pen).
+    MouseHoveredViewport:                          ID; // (Optional) Modify using io.AddMouseViewportEvent(). With multi-viewports: viewport the OS mouse is hovering. If possible _IGNORING_ viewports with the ImGuiViewportFlags_NoInputs flag is much better (few backends can handle that). Set io.BackendFlags |= ImGuiBackendFlags_HasMouseHoveredViewport if you can provide this info. If you don't imgui will infer the value using the rectangles and last focused time of the viewports it knows about (ignoring other OS windows).
     KeyCtrl:                                       bool; // Keyboard modifier down: Control
     KeyShift:                                      bool; // Keyboard modifier down: Shift
     KeyAlt:                                        bool; // Keyboard modifier down: Alt
@@ -2919,6 +3049,7 @@ IO :: struct {
     MouseCtrlLeftAsRightClick:                     bool; // (OSX) Set to true when the current click was a Ctrl+click that spawned a simulated right click
     MouseDownDuration:                             [5] float; // Duration the mouse button has been down (0.0f == just clicked)
     MouseDownDurationPrev:                         [5] float; // Previous time the mouse button has been down
+    MouseDragMaxDistanceAbs:                       [5] ImVec2; // Maximum distance, absolute, on each axis, of how much mouse has traveled from the clicking point
     MouseDragMaxDistanceSqr:                       [5] float; // Squared maximum distance of how much mouse has traveled from the clicking point (used for moving thresholds)
     PenPressure:                                   float; // Touch/Pen pressure (0.0f to 1.0f, should be >0.0f only when MouseDown[0] == true). Helper storage currently unused by Dear ImGui.
     AppFocusLost:                                  bool; // Only modify via AddFocusEvent()
@@ -2975,6 +3106,25 @@ SizeCallbackData :: struct {
     Pos:         ImVec2; // Read-only.   Window position, for reference.
     CurrentSize: ImVec2; // Read-only.   Current window size.
     DesiredSize: ImVec2; // Read-write.  Desired size, based on user's mouse position. Write to this field to restrain resizing.
+}
+
+// [ALPHA] Rarely used / very advanced uses only. Use with SetNextWindowClass() and DockSpace() functions.
+// Important: the content of this class is still highly WIP and likely to change and be refactored
+// before we stabilize Docking features. Please be mindful if using this.
+// Provide hints:
+// - To the platform backend via altered viewport flags (enable/disable OS decoration, OS task bar icons, etc.)
+// - To the platform backend for OS level parent/child relationships of viewport.
+// - To the docking system for various options and filtering.
+WindowClass :: struct {
+    ClassId:                    ID; // User data. 0 = Default class (unclassed). Windows of different classes cannot be docked with each others.
+    ParentViewportId:           ID; // Hint for the platform backend. -1: use default. 0: request platform backend to not parent the platform. != 0: request platform backend to create a parent<>child relationship between the platform windows. Not conforming backends are free to e.g. parent every viewport to the main viewport or not.
+    FocusRouteParentWindowId:   ID; // ID of parent window for shortcut focus route evaluation, e.g. Shortcut() call from Parent Window will succeed when this window is focused.
+    ViewportFlagsOverrideSet:   ViewportFlags; // Viewport flags to set when a window of this class owns a viewport. This allows you to enforce OS decoration or task bar icon, override the defaults on a per-window basis.
+    ViewportFlagsOverrideClear: ViewportFlags; // Viewport flags to clear when a window of this class owns a viewport. This allows you to enforce OS decoration or task bar icon, override the defaults on a per-window basis.
+    TabItemFlagsOverrideSet:    TabItemFlags; // [EXPERIMENTAL] TabItem flags to set when a window of this class gets submitted into a dock node tab bar. May use with ImGuiTabItemFlags_Leading or ImGuiTabItemFlags_Trailing.
+    DockNodeFlagsOverrideSet:   DockNodeFlags; // [EXPERIMENTAL] Dock node flags to set when a window of this class is hosted by a dock node (it doesn't have to be selected!)
+    DockingAlwaysTabBar:        bool; // Set to true to enforce single floating windows of this class always having their own docking node (equivalent of setting the global io.ConfigDockingAlwaysTabBar)
+    DockingAllowUnclassed:      bool; // Set to true to allow windows of this class to be docked/merged with an unclassed window. // FIXME-DOCK: Move to DockNodeFlags override?
 }
 
 // Data payload for Drag and Drop operations: AcceptDragDropPayload(), GetDragDropPayload()
@@ -3562,7 +3712,7 @@ ImDrawList :: struct {
 // as this is one of the oldest structure exposed by the library! Basically, ImDrawList == CmdList)
 ImDrawData :: struct {
     Valid:            bool; // Only valid after Render() is called and before the next NewFrame() is called.
-    CmdListsCount:    s32; // Number of ImDrawList* to render (should always be == CmdLists.size)
+    CmdListsCount:    s32; // Number of ImDrawList* to render
     TotalIdxCount:    s32; // For convenience, sum of all ImDrawList's IdxBuffer.Size
     TotalVtxCount:    s32; // For convenience, sum of all ImDrawList's VtxBuffer.Size
     CmdLists:         ImVector(*ImDrawList); // Array of ImDrawList* to render. The ImDrawLists are owned by ImGuiContext and only pointed to from here.
@@ -3599,7 +3749,7 @@ ImFontConfig :: struct {
     GlyphExtraAdvanceX:   float; // 0        // Extra spacing (in pixels) between glyphs. Please contact us if you are using this.
     FontBuilderFlags:     u32; // 0        // Settings for custom font builder. THIS IS BUILDER IMPLEMENTATION DEPENDENT. Leave as zero if unsure.
     RasterizerMultiply:   float; // 1.0f     // Linearly brighten (>1.0f) or darken (<1.0f) font output. Brightening small fonts may be a good workaround to make them more readable. This is a silly thing we may remove in the future.
-    RasterizerDensity:    float; // 1.0f     // DPI scale for rasterization, not altering other font metrics: make it easy to swap between e.g. a 100% and a 400% fonts for a zooming display. IMPORTANT: If you increase this it is expected that you increase font scale accordingly, otherwise quality may look lowered.
+    RasterizerDensity:    float; // 1.0f     // DPI scale for rasterization, not altering other font metrics: make it easy to swap between e.g. a 100% and a 400% fonts for a zooming display, or handle Retina screen. IMPORTANT: If you change this it is expected that you increase/decrease font scale roughly to the inverse of this, otherwise quality may look lowered.
     EllipsisChar:         ImWchar; // 0        // Explicitly specify Unicode codepoint of ellipsis character. When fonts are being merged first specified ellipsis will be used.
 
     Name:                 [40] u8; // Name (strictly to ease debugging)
@@ -3813,9 +3963,9 @@ ImFont :: struct {
     CalcWordWrapPositionA :: (this: *ImFont, scale: float, text: string, wrap_width: float) -> *u8 #no_context {
         return CalcWordWrapPositionA(this, scale, text.data, text.data + text.count, wrap_width);
     }
-    RenderChar :: (this: *ImFont, draw_list: *ImDrawList, size: float, pos: *ImVec2, col: ImU32, c: ImWchar) -> void #cpp_method #foreign imgui "?RenderChar@ImFont@@QEAAXPEAUImDrawList@@MAEBUImVec2@@IG@Z";
-    RenderChar :: (this: *ImFont, draw_list: *ImDrawList, size: float, pos: ImVec2, col: ImU32, c: ImWchar) #no_context {
-        RenderChar(this, draw_list, size, *pos, col, c);
+    RenderChar :: (this: *ImFont, draw_list: *ImDrawList, size: float, pos: *ImVec2, col: ImU32, c: ImWchar, cpu_fine_clip: *ImVec4 = null) -> void #cpp_method #foreign imgui "?RenderChar@ImFont@@QEAAXPEAUImDrawList@@MAEBUImVec2@@IGPEBUImVec4@@@Z";
+    RenderChar :: (this: *ImFont, draw_list: *ImDrawList, size: float, pos: ImVec2, col: ImU32, c: ImWchar, cpu_fine_clip: *ImVec4 = null) #no_context {
+        RenderChar(this, draw_list, size, *pos, col, c, cpu_fine_clip);
     }
     RenderText :: (this: *ImFont, draw_list: *ImDrawList, size: float, pos: *ImVec2, col: ImU32, clip_rect: *ImVec4, text_begin: *u8, text_end: *u8, wrap_width: float = 0.0, cpu_fine_clip := false) -> void #cpp_method #foreign imgui "?RenderText@ImFont@@QEAAXPEAUImDrawList@@MAEBUImVec2@@IAEBUImVec4@@PEBD3M_N@Z";
     RenderText :: (this: *ImFont, draw_list: *ImDrawList, size: float, pos: ImVec2, col: ImU32, clip_rect: ImVec4, text: string, wrap_width: float = 0.0, cpu_fine_clip := false) #no_context {
@@ -3827,40 +3977,74 @@ ImFont :: struct {
     ClearOutputData :: (this: *ImFont) -> void #cpp_method #foreign imgui "?ClearOutputData@ImFont@@QEAAXXZ";
     GrowIndex :: (this: *ImFont, new_size: s32) -> void #cpp_method #foreign imgui "?GrowIndex@ImFont@@QEAAXH@Z";
     AddGlyph :: (this: *ImFont, src_cfg: *ImFontConfig, c: ImWchar, x0: float, y0: float, x1: float, y1: float, u0: float, v0: float, u1: float, v1: float, advance_x: float) -> void #cpp_method #foreign imgui "?AddGlyph@ImFont@@QEAAXPEBUImFontConfig@@GMMMMMMMMM@Z";
-    AddRemapChar :: (this: *ImFont, dst: ImWchar, src: ImWchar, overwrite_dst := true) -> void #cpp_method #foreign imgui "?AddRemapChar@ImFont@@QEAAXGG_N@Z";
+    AddRemapChar :: (this: *ImFont, from_codepoint: ImWchar, to_codepoint: ImWchar, overwrite_dst: bool) -> void #cpp_method #foreign imgui "?AddRemapChar@ImFont@@QEAAXGG_N@Z";
     IsGlyphRangeUnused :: (this: *ImFont, c_begin: u32, c_last: u32) -> bool #cpp_method #foreign imgui "?IsGlyphRangeUnused@ImFont@@QEAA_NII@Z";
 }
 
 // Flags stored in ImGuiViewport::Flags, giving indications to the platform backends.
 ViewportFlags :: enum_flags s32 {
-    None              :: 0x0;
-    IsPlatformWindow  :: 0x1;
-    IsPlatformMonitor :: 0x2;
-    OwnedByApp        :: 0x4;
+    None                :: 0x0;
+    IsPlatformWindow    :: 0x1;
+    IsPlatformMonitor   :: 0x2;
+    OwnedByApp          :: 0x4;
+    NoDecoration        :: 0x8;
+    NoTaskBarIcon       :: 0x10;
+    NoFocusOnAppearing  :: 0x20;
+    NoFocusOnClick      :: 0x40;
+    NoInputs            :: 0x80;
+    NoRendererClear     :: 0x100;
+    NoAutoMerge         :: 0x200;
+    TopMost             :: 0x400;
+    CanHostOtherWindows :: 0x800;
 
-    ImGuiViewportFlags_None              :: None;
-    ImGuiViewportFlags_IsPlatformWindow  :: IsPlatformWindow;
-    ImGuiViewportFlags_IsPlatformMonitor :: IsPlatformMonitor;
-    ImGuiViewportFlags_OwnedByApp        :: OwnedByApp;
+    IsMinimized         :: 0x1000;
+    IsFocused           :: 0x2000;
+
+    ImGuiViewportFlags_None                :: None;
+    ImGuiViewportFlags_IsPlatformWindow    :: IsPlatformWindow;
+    ImGuiViewportFlags_IsPlatformMonitor   :: IsPlatformMonitor;
+    ImGuiViewportFlags_OwnedByApp          :: OwnedByApp;
+    ImGuiViewportFlags_NoDecoration        :: NoDecoration;
+    ImGuiViewportFlags_NoTaskBarIcon       :: NoTaskBarIcon;
+    ImGuiViewportFlags_NoFocusOnAppearing  :: NoFocusOnAppearing;
+    ImGuiViewportFlags_NoFocusOnClick      :: NoFocusOnClick;
+    ImGuiViewportFlags_NoInputs            :: NoInputs;
+    ImGuiViewportFlags_NoRendererClear     :: NoRendererClear;
+    ImGuiViewportFlags_NoAutoMerge         :: NoAutoMerge;
+    ImGuiViewportFlags_TopMost             :: TopMost;
+    ImGuiViewportFlags_CanHostOtherWindows :: CanHostOtherWindows;
+
+    ImGuiViewportFlags_IsMinimized         :: IsMinimized;
+    ImGuiViewportFlags_IsFocused           :: IsFocused;
 }
 
 // - Currently represents the Platform Window created by the application which is hosting our Dear ImGui windows.
-// - In 'docking' branch with multi-viewport enabled, we extend this concept to have multiple active viewports.
+// - With multi-viewport enabled, we extend this concept to have multiple active viewports.
 // - In the future we will extend this concept further to also represent Platform Monitor and support a "no main platform window" operation mode.
 // - About Main Area vs Work Area:
 //   - Main Area = entire viewport.
 //   - Work Area = entire viewport minus sections used by main menu bars (for platform windows), or by task bar (for platform monitor).
 //   - Windows are generally trying to stay within the Work Area of their host viewport.
 Viewport :: struct {
-    ID_:               ID; // Unique identifier for the viewport
-    Flags:             ViewportFlags; // See ImGuiViewportFlags_
-    Pos:               ImVec2; // Main Area: Position of the viewport (Dear ImGui coordinates are the same as OS desktop/native coordinates)
-    Size:              ImVec2; // Main Area: Size of the viewport.
-    WorkPos:           ImVec2; // Work Area: Position of the viewport minus task bars, menus bars, status bars (>= Pos)
-    WorkSize:          ImVec2; // Work Area: Size of the viewport minus task bars, menu bars, status bars (<= Size)
+    ID_:                   ID; // Unique identifier for the viewport
+    Flags:                 ViewportFlags; // See ImGuiViewportFlags_
+    Pos:                   ImVec2; // Main Area: Position of the viewport (Dear ImGui coordinates are the same as OS desktop/native coordinates)
+    Size:                  ImVec2; // Main Area: Size of the viewport.
+    FramebufferScale:      ImVec2; // Density of the viewport for Retina display (always 1,1 on Windows, may be 2,2 etc on macOS/iOS).
+    WorkPos:               ImVec2; // Work Area: Position of the viewport minus task bars, menus bars, status bars (>= Pos)
+    WorkSize:              ImVec2; // Work Area: Size of the viewport minus task bars, menu bars, status bars (<= Size)
+    DpiScale:              float; // 1.0f = 96 DPI = No extra scale.
+    ParentViewportId:      ID; // (Advanced) 0: no parent. Instruct the platform backend to setup a parent/child relationship between platform windows.
+    DrawData:              *ImDrawData; // The ImDrawData corresponding to this viewport. Valid after Render() and until the next call to NewFrame().
 
-    PlatformHandle:    *void; // void* to hold higher-level, platform window handle (e.g. HWND, GLFWWindow*, SDL_Window*)
-    PlatformHandleRaw: *void; // void* to hold lower-level, platform-native window handle (under Win32 this is expected to be a HWND, unused for other platforms)
+    RendererUserData:      *void; // void* to hold custom data structure for the renderer (e.g. swap chain, framebuffers etc.). generally set by your Renderer_CreateWindow function.
+    PlatformUserData:      *void; // void* to hold custom data structure for the OS / platform (e.g. windowing info, render context). generally set by your Platform_CreateWindow function.
+    PlatformHandle:        *void; // void* to hold higher-level, platform window handle (e.g. HWND for Win32 backend, Uint32 WindowID for SDL, GLFWWindow* for GLFW), for FindViewportByPlatformHandle().
+    PlatformHandleRaw:     *void; // void* to hold lower-level, platform-native window handle (always HWND on Win32 platform, unused for other platforms).
+    PlatformWindowCreated: bool; // Platform window has been created (Platform_CreateWindow() has been called). This is false during the first frame where a viewport is being created.
+    PlatformRequestMove:   bool; // Platform window requested move (e.g. window was moved by the OS / host window manager, authoritative position will be OS window position)
+    PlatformRequestResize: bool; // Platform window requested resize (e.g. window was resized by the OS / host window manager, authoritative size will be OS window size)
+    PlatformRequestClose:  bool; // Platform window requested closure (e.g. window was moved by the OS / host window manager, e.g. pressing ALT-F4)
 }
 
 // Access via ImGui::GetPlatformIO()
@@ -3869,31 +4053,78 @@ PlatformIO :: struct {
 
     // Optional: Access OS clipboard
     // (default to use native Win32 clipboard on Windows, otherwise uses a private clipboard. Override to access OS clipboard on other architectures)
-    Platform_GetClipboardTextFn:  #type (ctx: *ImGuiContext) -> *u8 #c_call;
-    Platform_SetClipboardTextFn:  #type (ctx: *ImGuiContext, text: *u8) -> void #c_call;
-    Platform_ClipboardUserData:   *void;
+    Platform_GetClipboardTextFn:        #type (ctx: *ImGuiContext) -> *u8 #c_call;
+    Platform_SetClipboardTextFn:        #type (ctx: *ImGuiContext, text: *u8) -> void #c_call;
+    Platform_ClipboardUserData:         *void;
 
     // Optional: Open link/folder/file in OS Shell
     // (default to use ShellExecuteW() on Windows, system() on Linux/Mac)
-    Platform_OpenInShellFn:       #type (ctx: *ImGuiContext, path: *u8) -> bool #c_call;
-    Platform_OpenInShellUserData: *void;
+    Platform_OpenInShellFn:             #type (ctx: *ImGuiContext, path: *u8) -> bool #c_call;
+    Platform_OpenInShellUserData:       *void;
 
     // Optional: Notify OS Input Method Editor of the screen position of your cursor for text input position (e.g. when using Japanese/Chinese IME on Windows)
     // (default to use native imm32 api on Windows)
-    Platform_SetImeDataFn:        #type (ctx: *ImGuiContext, viewport: *Viewport, data: *PlatformImeData) -> void #c_call;
-    Platform_ImeUserData:         *void;
+    Platform_SetImeDataFn:              #type (ctx: *ImGuiContext, viewport: *Viewport, data: *PlatformImeData) -> void #c_call;
+    Platform_ImeUserData:               *void;
 
-    Platform_LocaleDecimalPoint:  ImWchar; // '.'
+    Platform_LocaleDecimalPoint:        ImWchar; // '.'
 
     // Written by some backends during ImGui_ImplXXXX_RenderDrawData() call to point backend_specific ImGui_ImplXXXX_RenderState* structure.
-    Renderer_RenderState:         *void;
+    Renderer_RenderState:               *void;
+
+    Platform_CreateWindow:              #type (vp: *Viewport) -> void #c_call; // . . U . .  // Create a new platform window for the given viewport
+    Platform_DestroyWindow:             #type (vp: *Viewport) -> void #c_call; // N . U . D  //
+    Platform_ShowWindow:                #type (vp: *Viewport) -> void #c_call; // . . U . .  // Newly created windows are initially hidden so SetWindowPos/Size/Title can be called on them before showing the window
+    Platform_SetWindowPos:              #type (vp: *Viewport, pos: ImVec2) -> void #c_call; // . . U . .  // Set platform window position (given the upper-left corner of client area)
+    Platform_GetWindowPos:              #type (vp: *Viewport) -> ImVec2 #c_call #cpp_return_type_is_non_pod; // N . . . .  //
+    Platform_SetWindowSize:             #type (vp: *Viewport, size: ImVec2) -> void #c_call; // . . U . .  // Set platform window client area size (ignoring OS decorations such as OS title bar etc.)
+    Platform_GetWindowSize:             #type (vp: *Viewport) -> ImVec2 #c_call #cpp_return_type_is_non_pod; // N . . . .  // Get platform window client area size
+    Platform_GetWindowFramebufferScale: #type (vp: *Viewport) -> ImVec2 #c_call #cpp_return_type_is_non_pod; // N . . . .  // Return viewport density. Always 1,1 on Windows, often 2,2 on Retina display on macOS/iOS. MUST BE INTEGER VALUES.
+    Platform_SetWindowFocus:            #type (vp: *Viewport) -> void #c_call; // N . . . .  // Move window to front and set input focus
+    Platform_GetWindowFocus:            #type (vp: *Viewport) -> bool #c_call; // . . U . .  //
+    Platform_GetWindowMinimized:        #type (vp: *Viewport) -> bool #c_call; // N . . . .  // Get platform window minimized state. When minimized, we generally won't attempt to get/set size and contents will be culled more easily
+    Platform_SetWindowTitle:            #type (vp: *Viewport, str: *u8) -> void #c_call; // . . U . .  // Set platform window title (given an UTF-8 string)
+    Platform_SetWindowAlpha:            #type (vp: *Viewport, alpha: float) -> void #c_call; // . . U . .  // (Optional) Setup global transparency (not per-pixel transparency)
+    Platform_UpdateWindow:              #type (vp: *Viewport) -> void #c_call; // . . U . .  // (Optional) Called by UpdatePlatformWindows(). Optional hook to allow the platform backend from doing general book-keeping every frame.
+    Platform_RenderWindow:              #type (vp: *Viewport, render_arg: *void) -> void #c_call; // . . . R .  // (Optional) Main rendering (platform side! This is often unused, or just setting a "current" context for OpenGL bindings). 'render_arg' is the value passed to RenderPlatformWindowsDefault().
+    Platform_SwapBuffers:               #type (vp: *Viewport, render_arg: *void) -> void #c_call; // . . . R .  // (Optional) Call Present/SwapBuffers (platform side! This is often unused!). 'render_arg' is the value passed to RenderPlatformWindowsDefault().
+    Platform_GetWindowDpiScale:         #type (vp: *Viewport) -> float #c_call; // N . . . .  // (Optional) [BETA] FIXME-DPI: DPI handling: Return DPI scale for this viewport. 1.0f = 96 DPI.
+    Platform_OnChangedViewport:         #type (vp: *Viewport) -> void #c_call; // . F . . .  // (Optional) [BETA] FIXME-DPI: DPI handling: Called during Begin() every time the viewport we are outputting into changes, so backend has a chance to swap fonts to adjust style.
+    Platform_GetWindowWorkAreaInsets:   #type (vp: *Viewport) -> ImVec4 #c_call #cpp_return_type_is_non_pod; // N . . . .  // (Optional) [BETA] Get initial work area inset for the viewport (won't be covered by main menu bar, dockspace over viewport etc.). Default to (0,0),(0,0). 'safeAreaInsets' in iOS land, 'DisplayCutout' in Android land.
+    Platform_CreateVkSurface:           #type (vp: *Viewport, vk_inst: ImU64, vk_allocators: *void, out_vk_surface: *ImU64) -> s32 #c_call; // (Optional) For a Vulkan Renderer to call into Platform code (since the surface creation needs to tie them both).
+
+    Renderer_CreateWindow:              #type (vp: *Viewport) -> void #c_call; // . . U . .  // Create swap chain, frame buffers etc. (called after Platform_CreateWindow)
+    Renderer_DestroyWindow:             #type (vp: *Viewport) -> void #c_call; // N . U . D  // Destroy swap chain, frame buffers etc. (called before Platform_DestroyWindow)
+    Renderer_SetWindowSize:             #type (vp: *Viewport, size: ImVec2) -> void #c_call; // . . U . .  // Resize swap chain, frame buffers etc. (called after Platform_SetWindowSize)
+    Renderer_RenderWindow:              #type (vp: *Viewport, render_arg: *void) -> void #c_call; // . . . R .  // (Optional) Clear framebuffer, setup render target, then render the viewport->DrawData. 'render_arg' is the value passed to RenderPlatformWindowsDefault().
+    Renderer_SwapBuffers:               #type (vp: *Viewport, render_arg: *void) -> void #c_call; // . . . R .  // (Optional) Call Present/SwapBuffers. 'render_arg' is the value passed to RenderPlatformWindowsDefault().
+
+    // (Optional) Monitor list
+    // - Updated by: app/backend. Update every frame to dynamically support changing monitor or DPI configuration.
+    // - Used by: dear imgui to query DPI info, clamp popups/tooltips within same monitor and not have them straddle monitors.
+    Monitors:                           ImVector(PlatformMonitor);
+
+    Viewports:                          ImVector(*Viewport); // Main viewports, followed by all secondary viewports.
 }
 
-// (Optional) Support for IME (Input Method Editor) via the platform_io.Platform_SetImeDataFn() function.
+// (Optional) This is required when enabling multi-viewport. Represent the bounds of each connected monitor/display and their DPI.
+// We use this information for multiple DPI support + clamping the position of popups and tooltips so they don't straddle multiple monitors.
+PlatformMonitor :: struct {
+    MainPos:        ImVec2; // Coordinates of the area displayed on this monitor (Min = upper left, Max = bottom right)
+    MainSize:       ImVec2; // Coordinates of the area displayed on this monitor (Min = upper left, Max = bottom right)
+    WorkPos:        ImVec2; // Coordinates without task bars / side bars / menu bars. Used to avoid positioning popups/tooltips inside this region. If you don't have this info, please copy the value for MainPos/MainSize.
+    WorkSize:       ImVec2; // Coordinates without task bars / side bars / menu bars. Used to avoid positioning popups/tooltips inside this region. If you don't have this info, please copy the value for MainPos/MainSize.
+    DpiScale:       float; // 1.0f = 96 DPI
+    PlatformHandle: *void; // Backend dependant data (e.g. HMONITOR, GLFWmonitor*, SDL Display Index, NSScreen*)
+}
+
+// (Optional) Support for IME (Input Method Editor) via the platform_io.Platform_SetImeDataFn() function. Handler is called during EndFrame().
 PlatformImeData :: struct {
-    WantVisible:     bool; // A widget wants the IME to be visible
-    InputPos:        ImVec2; // Position of the input cursor
-    InputLineHeight: float; // Line height
+    WantVisible:     bool; // A widget wants the IME to be visible.
+    WantTextInput:   bool; // A widget wants text input, not necessarily IME to be visible. This is automatically set to the upcoming value of io.WantTextInput.
+    InputPos:        ImVec2; // Position of input cursor (for IME).
+    InputLineHeight: float; // Line height (for IME).
+    ViewportId:      ID; // ID of platform window/viewport.
 }
 
 #scope_file

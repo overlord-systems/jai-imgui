@@ -37,8 +37,11 @@ main :: () {
     success := SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD | SDL_INIT_AUDIO);
     ok_or_exit(success, "failed to init sdl3 with error = %", consume_sdl_error());
 
-    window := SDL_CreateWindow("Overlord Systems", 1920, 1080, SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY);
-    ok_or_exit(!!window, "failed to create window with error = %", consume_sdl_error());
+    window := SDL_CreateWindow("Overlord Systems", 1920, 1080, SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIDDEN | SDL_WINDOW_HIGH_PIXEL_DENSITY);
+    ok_or_exit(window != null, "failed to create window with error = %", consume_sdl_error());
+
+    SDL_SetWindowPosition(window, xx SDL_WINDOWPOS_CENTERED(), xx SDL_WINDOWPOS_CENTERED());
+    SDL_ShowWindow(window);
 
     gpu_device := SDL_CreateGPUDevice(SDL_GPU_SHADERFORMAT_SPIRV | SDL_GPU_SHADERFORMAT_DXIL | SDL_GPU_SHADERFORMAT_METALLIB, DEBUG, null);
     ok_or_exit(gpu_device != null, "failed to create gpu device with error = %", consume_sdl_error());
@@ -56,8 +59,15 @@ main :: () {
     ctx := CreateContext();
     io := GetIO();
 
-    io.ConfigFlags_ |= .NavEnableKeyboard | .NavEnableGamepad;
+    io.ConfigFlags_ |= .DockingEnable | .ViewportsEnable | .DpiEnableScaleViewports | .DpiEnableScaleFonts | .NavEnableKeyboard | .NavEnableGamepad;
     StyleColorsDark();
+
+    // When viewports are enabled we tweak WindowRounding/WindowBg so platform windows can look identical to regular ones.
+    style := GetStyle();
+    if io.ConfigFlags_ & .ViewportsEnable {
+        style.WindowRounding = 0;
+        style.Colors[Col.WindowBg].w = 1;
+    }
 
     // Setup imgui sdl3_gpu3 backend
     success = ImplSDL3_InitForSDLGPU(window);
@@ -75,6 +85,7 @@ main :: () {
     // Program loop
     is_running := true;
     clear_color := SDL_FColor.{ a=1};
+
     while is_running {
 
         //
@@ -162,6 +173,12 @@ main :: () {
 
             // End render pass
             SDL_EndGPURenderPass(render_pass);
+        }
+
+        // Update and Render additional Platform Windows
+        if io.ConfigFlags_ & .ViewportsEnable {
+            UpdatePlatformWindows();
+            RenderPlatformWindowsDefault();
         }
 
         // Finally, we send to GPU to draw

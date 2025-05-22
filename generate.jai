@@ -2,7 +2,7 @@
 // jai compiler beta 0.2.012, built 11 May 2025.
 
 // We don’t ship the Dear ImGui source with the compiler. Download a Dear ImGui release and update this path if you want to re-generate the bindings.
-IMGUI_PATH :: "src/imgui"; // Docking v1.91.9b
+IMGUI_PATH :: "src/imgui"; // Docking e11ad6b77e5c7f7ed28467fec42fe2c72068b68e (a bit after v1.91.9b)
 SDL3_INCLUDE_PATH :: "src/include"; // Used for SDL v3.2.14
 
 DECLARATIONS_TO_OMIT :: string.[
@@ -157,7 +157,7 @@ EOF
 compile_and_generate_bindings_backend_sdl3_gpu3 :: (compile_debug: bool) -> bool {
 
     success := false;
-    array_add(*prefixes_to_keep, "ImGui_ImplSDL3_", "ImGui_ImplSDLGPU3_", "Imgui_ImplSDLGPU3");
+    array_add(*prefixes_to_keep, "ImGui_ImplSDL3_", "ImGui_ImplSDLGPU3_");
 
     // Generate binaries
     #if OS == .WINDOWS {

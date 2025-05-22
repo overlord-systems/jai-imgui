@@ -42,7 +42,7 @@ ImplSDLGPU3_InitInfo :: struct {
 ImplSDLGPU3_Init :: (info: *ImplSDLGPU3_InitInfo) -> bool #foreign imgui_sdl3_gpu3 "?ImGui_ImplSDLGPU3_Init@@YA_NPEAUImGui_ImplSDLGPU3_InitInfo@@@Z";
 ImplSDLGPU3_Shutdown :: () -> void #foreign imgui_sdl3_gpu3 "?ImGui_ImplSDLGPU3_Shutdown@@YAXXZ";
 ImplSDLGPU3_NewFrame :: () -> void #foreign imgui_sdl3_gpu3 "?ImGui_ImplSDLGPU3_NewFrame@@YAXXZ";
-ImplSDLGPU3_PrepareDrawData :: (draw_data: *ImDrawData, command_buffer: *SDL_GPUCommandBuffer) -> void #foreign imgui_sdl3_gpu3 "?Imgui_ImplSDLGPU3_PrepareDrawData@@YAXPEAUImDrawData@@PEAUSDL_GPUCommandBuffer@@@Z";
+ImplSDLGPU3_PrepareDrawData :: (draw_data: *ImDrawData, command_buffer: *SDL_GPUCommandBuffer) -> void #foreign imgui_sdl3_gpu3 "?ImGui_ImplSDLGPU3_PrepareDrawData@@YAXPEAUImDrawData@@PEAUSDL_GPUCommandBuffer@@@Z";
 ImplSDLGPU3_RenderDrawData :: (draw_data: *ImDrawData, command_buffer: *SDL_GPUCommandBuffer, render_pass: *SDL_GPURenderPass, pipeline: *SDL_GPUGraphicsPipeline = null) -> void #foreign imgui_sdl3_gpu3 "?ImGui_ImplSDLGPU3_RenderDrawData@@YAXPEAUImDrawData@@PEAUSDL_GPUCommandBuffer@@PEAUSDL_GPURenderPass@@PEAUSDL_GPUGraphicsPipeline@@@Z";
 
 ImplSDLGPU3_CreateDeviceObjects :: () -> void #foreign imgui_sdl3_gpu3 "?ImGui_ImplSDLGPU3_CreateDeviceObjects@@YAXXZ";
