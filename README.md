@@ -8,7 +8,7 @@ Generated bindings have the `ImGui` prefix removed, like `ImGuiStyle` becoming `
 
 Bindings for official ImGui backends can be found in the `backends` folder.
 
-The SDL3 headers we are using to build the SDL3 backend are `SDL v3.2.14`.
+The SDL3 headers we are using to build the SDL3 backend are `SDL v3.2.14`. You can find SDL3 bindings for jai [here](github.com/overlord-systems/jai-sdl3).
 
 ## Usage
 
