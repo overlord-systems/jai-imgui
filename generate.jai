@@ -92,17 +92,10 @@ generate_imgui_bindings :: (args: [] string) -> bool {
         if !success return false;
     }
 
+    // We return if we generate a backend because bindings generator crashes if we do more than one generation per run
     if backend_sdl3_gpu3 {
-
-        backend_files :: string.[
-            #run sprint("%/backends/imgui_impl_sdl3.cpp", IMGUI_PATH),
-            #run sprint("%/backends/imgui_impl_sdlgpu3.cpp", IMGUI_PATH),
-        ];
-
-        // We set IMGUI_DISABLE_WIN32_DEFAULT_IME_FUNCTIONS. Otherwise all users of the ImGui module have to link against "imm32".
-        success := build_cpp_static_lib("windows/ImGui_sdl3_gpu3.static", ..backend_files, extra = .["/DIMGUI_API=__declspec(dllexport)", "/DIMGUI_DISABLE_WIN32_DEFAULT_IME_FUNCTIONS", tprint("/I%", IMGUI_PATH), tprint("/I%", SDL3_INCLUDE_PATH)], debug=compile_debug);
-
-        if !success return false;
+        success := compile_and_generate_bindings_backend_sdl3_gpu3(compile_debug);
+        return success;
     }
 
     init(*enums_for_typedefs);
@@ -161,10 +154,102 @@ EOF
     return success;
 }
 
+compile_and_generate_bindings_backend_sdl3_gpu3 :: (compile_debug: bool) -> bool {
+
+    array_add(*prefixes_to_keep, "ImGui_ImplSDL3_", "ImGui_ImplSDLGPU3_");
+
+    // Generate binaries
+    {
+        src_files := string.[
+            sprint("%/backends/imgui_impl_sdl3.cpp", IMGUI_PATH),
+            sprint("%/backends/imgui_impl_sdlgpu3.cpp", IMGUI_PATH),
+        ];
+
+        // We set IMGUI_DISABLE_WIN32_DEFAULT_IME_FUNCTIONS. Otherwise all users of the ImGui module have to link against "imm32".
+        success := build_cpp_static_lib("windows/ImGui_sdl3_gpu3.static", ..src_files, extra = .["/DIMGUI_API=__declspec(dllexport)", "/DIMGUI_DISABLE_WIN32_DEFAULT_IME_FUNCTIONS", tprint("/I%", IMGUI_PATH), tprint("/I%", SDL3_INCLUDE_PATH)], debug=compile_debug);
+
+        if !success return false;
+    }
+
+    // Generate bindings
+    output_filename: string;
+    opts: Generate_Bindings_Options;
+    {
+        using opts;
+
+        #if OS == .WINDOWS {
+
+            array_add(*libpaths, "windows");
+            array_add(*libnames, "ImGui_sdl3_gpu3.static");
+            output_filename = "windows/windows_sdl3_gpu3.jai";
+            generate_library_declarations = false;
+
+            footer = #string EOF
+imgui_sdl3_gpu3 :: #library "ImGui_sdl3_gpu3.static";
+EOF
+
+        } else {
+            #if OS == .LINUX {
+                array_add(*libpaths, "linux");
+            } else #if OS == .MACOS {
+                array_add(*libpaths, "macos");
+            } else {
+                assert(false);
+            }
+
+            array_add(*libnames, "ImGui_sdl3_gpu3");
+            output_filename = "unix_sdl3_gpu3.jai";
+            generate_library_declarations = false;
+            footer = #string END
+#if OS == .MACOS imgui_sdl3_gpu3 :: #library "macos/ImGui_sdl3_gpu3";
+#if OS == .LINUX imgui_sdl3_gpu3 :: #library "linux/ImGui_sdl3_gpu3";
+END
+        }
+
+        array_add(*include_paths, IMGUI_PATH, SDL3_INCLUDE_PATH);
+        array_add(*source_files, tprint("%/backends/imgui_impl_sdl3.h", IMGUI_PATH), tprint("%/backends/imgui_impl_sdlgpu3.h", IMGUI_PATH));
+        array_add(*extra_clang_arguments, "-x", "c++", "-DWIN32_LEAN_AND_MEAN");
+        array_add(*flatten_namespaces, "ImGui");
+        array_add(*strip_prefixes, "ImGui");
+
+        auto_detect_enum_prefixes = false;
+        log_stripped_declarations = false;
+        generate_compile_time_struct_checks = false;
+        strip_flags |= .INLINED_FUNCTIONS; // "inline" functions are not present in the static library.
+
+        visitor   = imgui_visitor;
+        get_func_args_for_printing = imgui_get_function_arg_for_printing;
+    }
+
+    success := generate_bindings(opts, output_filename);
+    return success;
+}
+
 begin_end_string_args: [..]*Declaration;
 enums_for_typedefs: Table(string, *Enum);
+prefixes_to_keep: [..]string;
 
 imgui_visitor :: (decl: *Declaration, parent_decl: *Declaration) -> Declaration_Visit_Result {
+
+    // The parent check is because if we have a struct to keep we want
+    // everything inside it to stay even if the names aren't to keep, and
+    // so we only apply this check on top-level declarations.
+    if prefixes_to_keep.count && !parent_decl {
+
+        found := false;
+
+        for prefixes_to_keep {
+            if begins_with(decl.name, it) {
+                found = true;
+                break;
+            }
+        }
+
+        if !found {
+            decl.decl_flags |= .OMIT_FROM_OUTPUT;
+            return .STOP;
+        }
+    }
 
     // ImGui has "typedef ints" for each enum. but we want to just use the enums directly,
     // so we get nice type safety, and .unary dots, etc.
@@ -331,12 +416,5 @@ FOOTER_UNIX :: #string END
 
 #if OS == .MACOS    imgui :: #library "macos/ImGui";
 #if OS == .LINUX    imgui :: #library "linux/ImGui";
-
-END
-
-FOOTER_BACKENDS_UNIX :: #string END
-
-#if OS == .MACOS    imgui :: #library "macos/ImGui_backends";
-#if OS == .LINUX    imgui :: #library "linux/ImGui_backends";
 
 END
