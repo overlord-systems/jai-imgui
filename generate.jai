@@ -157,7 +157,7 @@ EOF
 compile_and_generate_bindings_backend_sdl3_gpu3 :: (compile_debug: bool) -> bool {
 
     success := false;
-    array_add(*prefixes_to_keep, "ImGui_ImplSDL3_", "ImGui_ImplSDLGPU3_");
+    array_add(*prefixes_to_keep, "ImGui_ImplSDL3_", "ImGui_ImplSDLGPU3_", "Imgui_ImplSDLGPU3");
 
     // Generate binaries
     #if OS == .WINDOWS {
@@ -219,7 +219,7 @@ END
         array_add(*source_files, tprint("%/backends/imgui_impl_sdl3.h", IMGUI_PATH), tprint("%/backends/imgui_impl_sdlgpu3.h", IMGUI_PATH));
         array_add(*extra_clang_arguments, "-x", "c++", "-DWIN32_LEAN_AND_MEAN");
         array_add(*flatten_namespaces, "ImGui");
-        array_add(*strip_prefixes, "ImGui");
+        array_add(*strip_prefixes, "ImGui", "Imgui");
 
         auto_detect_enum_prefixes = false;
         log_stripped_declarations = false;
