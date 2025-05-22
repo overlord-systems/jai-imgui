@@ -41,3 +41,5 @@ config.dev.json
 *.pdb
 *.rdi
 *.exp
+imgui.ini
+Makefile
