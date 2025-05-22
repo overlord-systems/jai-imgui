@@ -1,6 +1,6 @@
 # jai-imgui
 
-Jai bindings for the docking branch of [Dear ImGui](https://github.com/ocornut/imgui/tree/docking). We are currently at a commit a bit newer than `v1.91.9b`, which is [this](https://github.com/ocornut/imgui/tree/e11ad6b77e5c7f7ed28467fec42fe2c72068b68e).
+Jai bindings for the docking branch of [Dear ImGui](https://github.com/ocornut/imgui/tree/docking). We are currently at a commit a bit *newer* than `v1.91.9b`, which is [this](https://github.com/ocornut/imgui/tree/e11ad6b77e5c7f7ed28467fec42fe2c72068b68e).
 
 These bindings are generated using Bindings Generator, except for very few basic things (e.g. Vec2) where we use Jai types instead, and can be seen in `module.jai`.
 
