@@ -23,6 +23,7 @@ Note: We currently only support Windows, but it should be easy to add support fo
 3. Checkout to the `docking` branch (or don't, up to you), or any branch/commit you want
 4. Run `jai generate.jai` to generate new bindings. If you want to rebuild binaries as well, do `jai generate.jai - -compile`.
 5. Regenerate bindings using `jai generate.jai - -backend_sdl3_gpu3`. You must run once per backend.
+   1. If you want to update SDL3 headers, replace the `src/SDL3` folder with the new `include` folder from the [SDL3 repo](https://github.com/libsdl-org/SDL).
 
 ## Backends
 
