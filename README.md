@@ -14,7 +14,7 @@ The SDL3 headers we are using to build the SDL3 backend are `SDL v3.2.14`.
 
 Check out `tests/test.jai` for a complete working example using the `sdl3_gpu3` backend. You can compile using `jai tests/test.jai` and then run with `./tests/test.exe`.
 
-Note: We currently only support Windows, but it should be easy to add support for other platforms, just have to update `generate.jai` a bit. PRs welcome!
+Note: The main bindings should work on all platforms, but the backend currently only supports windows. It should be easy (trivial even) to add support for other platforms, just have to update `generate.jai` a bit. PRs welcome!
 
 ## Updating Bindings
 
