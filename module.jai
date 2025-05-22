@@ -1,4 +1,4 @@
-#module_parameters () (USE_DYNAMIC_LIB := false) {}
+#module_parameters () (USE_DYNAMIC_LIB := false);
 
 ImVec2      :: Vector2;
 ImVec4      :: Vector4;
@@ -25,6 +25,7 @@ ImDrawCallback :: #type (parent_list: *ImDrawList, cmd: *ImDrawCmd) #c_call;
 
     // Needed by imgui unless ImGui is compiled with IMGUI_DISABLE_WIN32_DEFAULT_CLIPBOARD_FUNCS"
     #library,system,link_always "user32";
+
     // Needed by imgui unless ImGui is compiled with IMGUI_DISABLE_DEFAULT_SHELL_FUNCTIONS
     #library,system,link_always "shell32";
 } else {

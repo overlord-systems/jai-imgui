@@ -156,19 +156,28 @@ EOF
 
 compile_and_generate_bindings_backend_sdl3_gpu3 :: (compile_debug: bool) -> bool {
 
+    success := false;
     array_add(*prefixes_to_keep, "ImGui_ImplSDL3_", "ImGui_ImplSDLGPU3_");
 
     // Generate binaries
-    {
+    #if OS == .WINDOWS {
+
+        make_directory_if_it_does_not_exist("backends/windows");
+
         src_files := string.[
             sprint("%/backends/imgui_impl_sdl3.cpp", IMGUI_PATH),
             sprint("%/backends/imgui_impl_sdlgpu3.cpp", IMGUI_PATH),
         ];
 
         // We set IMGUI_DISABLE_WIN32_DEFAULT_IME_FUNCTIONS. Otherwise all users of the ImGui module have to link against "imm32".
-        success := build_cpp_static_lib("windows/ImGui_sdl3_gpu3.static", ..src_files, extra = .["/DIMGUI_API=__declspec(dllexport)", "/DIMGUI_DISABLE_WIN32_DEFAULT_IME_FUNCTIONS", tprint("/I%", IMGUI_PATH), tprint("/I%", SDL3_INCLUDE_PATH)], debug=compile_debug);
+        success = build_cpp_static_lib("backends/windows/ImGui_sdl3_gpu3.static", ..src_files, extra = .["/DIMGUI_API=__declspec(dllexport)", "/DIMGUI_DISABLE_WIN32_DEFAULT_IME_FUNCTIONS", tprint("/I%", IMGUI_PATH), tprint("/I%", SDL3_INCLUDE_PATH)], debug=compile_debug);
 
         if !success return false;
+
+    } else {
+        log("only Windows is currently supported for generating backends, however it should be easy to add more! check '%' for an idea how to add support for more platforms", #procedure_name(), flags=.ERROR);
+
+        return false;
     }
 
     // Generate bindings
@@ -179,20 +188,20 @@ compile_and_generate_bindings_backend_sdl3_gpu3 :: (compile_debug: bool) -> bool
 
         #if OS == .WINDOWS {
 
-            array_add(*libpaths, "windows");
+            array_add(*libpaths, "backends/windows");
             array_add(*libnames, "ImGui_sdl3_gpu3.static");
-            output_filename = "windows/windows_sdl3_gpu3.jai";
+            output_filename = "backends/windows/windows_sdl3_gpu3.jai";
             generate_library_declarations = false;
 
             footer = #string EOF
-imgui_sdl3_gpu3 :: #library "ImGui_sdl3_gpu3.static";
+imgui_sdl3_gpu3 :: #library,no_dll "ImGui_sdl3_gpu3.static";
 EOF
 
         } else {
             #if OS == .LINUX {
-                array_add(*libpaths, "linux");
+                array_add(*libpaths, "backends/linux");
             } else #if OS == .MACOS {
-                array_add(*libpaths, "macos");
+                array_add(*libpaths, "backends/macos");
             } else {
                 assert(false);
             }
@@ -201,8 +210,8 @@ EOF
             output_filename = "unix_sdl3_gpu3.jai";
             generate_library_declarations = false;
             footer = #string END
-#if OS == .MACOS imgui_sdl3_gpu3 :: #library "macos/ImGui_sdl3_gpu3";
-#if OS == .LINUX imgui_sdl3_gpu3 :: #library "linux/ImGui_sdl3_gpu3";
+#if OS == .MACOS imgui_sdl3_gpu3 :: #library,no_dll "backends/macos/ImGui_sdl3_gpu3";
+#if OS == .LINUX imgui_sdl3_gpu3 :: #library,no_dll "backends/linux/ImGui_sdl3_gpu3";
 END
         }
 
@@ -221,7 +230,7 @@ END
         get_func_args_for_printing = imgui_get_function_arg_for_printing;
     }
 
-    success := generate_bindings(opts, output_filename);
+    success = generate_bindings(opts, output_filename);
     return success;
 }
 

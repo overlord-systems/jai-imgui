@@ -52,4 +52,4 @@ ImplSDLGPU3_DestroyFontsTexture :: () -> void #foreign imgui_sdl3_gpu3 "?ImGui_I
 
 #scope_file
 
-imgui_sdl3_gpu3 :: #library "ImGui_sdl3_gpu3.static";
+imgui_sdl3_gpu3 :: #library,no_dll "ImGui_sdl3_gpu3.static";
