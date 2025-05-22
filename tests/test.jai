@@ -28,18 +28,20 @@ ok_or_exit :: inline (success: bool, err_msg_format: string, args: ..Any, flags 
     exit(exit_code);
 } @PrintLike
 
+DEBUG :: true;
+
 main :: () {
 
     // Setup window and gpu using the SDL3_GPU3 backend.
     // This is based on the 'example_sdl3_sdlgpu3' Dear ImGui example, which you can find on their repo.
-    success := SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO);
+    success := SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD | SDL_INIT_AUDIO);
     ok_or_exit(success, "failed to init sdl3 with error = %", consume_sdl_error());
 
     window := SDL_CreateWindow("Overlord Systems", 1920, 1080, SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY);
     ok_or_exit(!!window, "failed to create window with error = %", consume_sdl_error());
 
-    gpu_device := SDL_CreateGPUDevice(SDL_GPU_SHADERFORMAT_SPIRV | SDL_GPU_SHADERFORMAT_DXIL | SDL_GPU_SHADERFORMAT_METALLIB, true, null);
-    ok_or_exit(!!gpu_device, "failed to create gpu device with error = %", consume_sdl_error());
+    gpu_device := SDL_CreateGPUDevice(SDL_GPU_SHADERFORMAT_SPIRV | SDL_GPU_SHADERFORMAT_DXIL | SDL_GPU_SHADERFORMAT_METALLIB, DEBUG, null);
+    ok_or_exit(gpu_device != null, "failed to create gpu device with error = %", consume_sdl_error());
 
     success = SDL_ClaimWindowForGPUDevice(gpu_device, window);
     ok_or_exit(success, "failed to claim window with title '%' for gpu device with error = %", to_string(SDL_GetWindowTitle(window)), consume_sdl_error());
@@ -58,12 +60,13 @@ main :: () {
     StyleColorsDark();
 
     // Setup imgui sdl3_gpu3 backend
-    ImplSDL3_InitForSDLGPU(window);
+    success = ImplSDL3_InitForSDLGPU(window);
+    ok_or_exit(success, "failed to InitForSDLGPU with error = %", consume_sdl_error());
 
     init_info := ImplSDLGPU3_InitInfo.{
         Device = gpu_device,
         ColorTargetFormat = SDL_GetGPUSwapchainTextureFormat(gpu_device, window),
-        MSAASamples = .SDL_GPU_SAMPLECOUNT_4,
+        MSAASamples = .SDL_GPU_SAMPLECOUNT_1,
     };
 
     success = ImplSDLGPU3_Init(*init_info);
@@ -71,6 +74,7 @@ main :: () {
 
     // Program loop
     is_running := true;
+    clear_color := SDL_FColor.{ a=1};
     while is_running {
 
         //
@@ -80,8 +84,7 @@ main :: () {
         while(SDL_PollEvent(*ev)) {
 
             // Send events to imgui through the backend, then do our processing
-            success = ImplSDL3_ProcessEvent(*ev);
-            ok_or_exit(success, "failed to process sdl3 event = % with error = %", ev, consume_sdl_error());
+            event_consumed := ImplSDL3_ProcessEvent(*ev);
 
             if ev.type == {
 
@@ -102,6 +105,12 @@ main :: () {
         //
         // Frame logic
         //
+
+        // Slow down rendering when minimized to not waste power
+        if SDL_GetWindowFlags(window) & SDL_WINDOW_MINIMIZED {
+            sleep_milliseconds(16);
+            continue;
+        }
 
         // Start new imgui frame
         ImplSDLGPU3_NewFrame();
@@ -125,7 +134,9 @@ main :: () {
 
         swapchain_texture: *SDL_GPUTexture;
         success = SDL_AcquireGPUSwapchainTexture(cmd_buffer, window, *swapchain_texture, null, null);
-        ok_or_exit(success, "failed to acquire gpu swapchain texture with error = %", consume_sdl_error());
+        // if !success {
+        //     log("failed to acquire gpu swapchain texture with error = %", consume_sdl_error());
+        // }
 
         // If all good we will do a render pass that draws the UI
         if swapchain_texture && !is_minimized {
@@ -136,7 +147,7 @@ main :: () {
             // Setup render pass and start it
             target_info := SDL_GPUColorTargetInfo.{
                 texture = swapchain_texture,
-                clear_color = SDL_FColor.{r=1},
+                clear_color = clear_color,
                 load_op = .CLEAR,
                 store_op = .STORE,
                 mip_level = 0,
@@ -162,7 +173,15 @@ main :: () {
     //
 
     SDL_WaitForGPUIdle(gpu_device);
+
+    // Cleanup imgui
     ImplSDL3_Shutdown();
     ImplSDLGPU3_Shutdown();
     DestroyContext(ctx);
+
+    // Cleanup sdl
+    SDL_ReleaseWindowFromGPUDevice(gpu_device, window);
+    SDL_DestroyGPUDevice(gpu_device);
+    SDL_DestroyWindow(window);
+    SDL_Quit();
 }
