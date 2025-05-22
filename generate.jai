@@ -56,50 +56,10 @@ generate_imgui_bindings :: (args: [] string) -> bool {
 
             make_directory_if_it_does_not_exist("windows");
 
-            // @TODO: Temp
-            if 0 {
-                success &&= build_cpp_dynamic_lib("windows/ImGui", ..imgui_src_files, extra = .["/DIMGUI_API=__declspec(dllexport)"], debug=compile_debug);
+            success &&= build_cpp_dynamic_lib("windows/ImGui", ..imgui_src_files, extra = .["/DIMGUI_API=__declspec(dllexport)"], debug=compile_debug);
 
-                // We set IMGUI_DISABLE_WIN32_DEFAULT_IME_FUNCTIONS. Otherwise all users of the ImGui module have to link against "imm32".
-                success &&= build_cpp_static_lib("windows/ImGui.static", ..imgui_src_files, extra = .["/DIMGUI_API=__declspec(dllexport)", "/DIMGUI_DISABLE_WIN32_DEFAULT_IME_FUNCTIONS"], debug=compile_debug);
-            }
-
-            if backend_sdl3_gpu3 {
-
-                backend_files :: string.[
-                    #run sprint("%/backends/imgui_impl_sdl3.cpp", IMGUI_PATH),
-                    #run sprint("%/backends/imgui_impl_sdlgpu3.cpp", IMGUI_PATH),
-                ];
-
-                array_add(*imgui_src_files, ..backend_files);
-                defer {
-                    // We don't want to introduce bugs when having multiple backends
-                    for backend_files array_unordered_remove_by_value(*imgui_src_files, it, true);
-                }
-
-                sdl3_library_path : string : #ifx CPU == .X64 {
-                    "/libpath:sdl3/windows/bin/x64";
-                } else #if CPU == .ARM64 {
-                    "/libpath:sdl3/windows/bin/arm64";
-                } else {
-                    log("cpu of type % is not currently supported for dynamic libaries. Only x64/arm64 are supported. You will need to get SDL3 binaries and update generate.jai.\n\nNote: static binaries will be generated.", logs=.ERROR);
-                    "";
-                }
-
-                #if sdl3_library_path {
-
-                    success &&= build_cpp_dynamic_lib(
-                        "windows/ImGui_sdl3_gpu3",
-                        ..imgui_src_files,
-                        extra = .["/DIMGUI_API=__declspec(dllexport)", tprint("/I%", IMGUI_PATH), tprint("/I%", SDL3_INCLUDE_PATH)],
-                        library_files = .[sdl3_library_path, "SDL3.lib"],
-                        debug=compile_debug,
-                    );
-                }
-
-                // We set IMGUI_DISABLE_WIN32_DEFAULT_IME_FUNCTIONS. Otherwise all users of the ImGui module have to link against "imm32".
-                success &&= build_cpp_static_lib("windows/ImGui_sdl3_gpu3.static", ..imgui_src_files, extra = .["/DIMGUI_API=__declspec(dllexport)", "/DIMGUI_DISABLE_WIN32_DEFAULT_IME_FUNCTIONS", tprint("/I%", IMGUI_PATH), tprint("/I%", SDL3_INCLUDE_PATH)], debug=compile_debug);
-            }
+            // We set IMGUI_DISABLE_WIN32_DEFAULT_IME_FUNCTIONS. Otherwise all users of the ImGui module have to link against "imm32".
+            success &&= build_cpp_static_lib("windows/ImGui.static", ..imgui_src_files, extra = .["/DIMGUI_API=__declspec(dllexport)", "/DIMGUI_DISABLE_WIN32_DEFAULT_IME_FUNCTIONS"], debug=compile_debug);
 
         } else #if OS == .LINUX {
             make_directory_if_it_does_not_exist("linux");
@@ -128,6 +88,19 @@ generate_imgui_bindings :: (args: [] string) -> bool {
         } else {
             assert(false);
         }
+
+        if !success return false;
+    }
+
+    if backend_sdl3_gpu3 {
+
+        backend_files :: string.[
+            #run sprint("%/backends/imgui_impl_sdl3.cpp", IMGUI_PATH),
+            #run sprint("%/backends/imgui_impl_sdlgpu3.cpp", IMGUI_PATH),
+        ];
+
+        // We set IMGUI_DISABLE_WIN32_DEFAULT_IME_FUNCTIONS. Otherwise all users of the ImGui module have to link against "imm32".
+        success := build_cpp_static_lib("windows/ImGui_sdl3_gpu3.static", ..backend_files, extra = .["/DIMGUI_API=__declspec(dllexport)", "/DIMGUI_DISABLE_WIN32_DEFAULT_IME_FUNCTIONS", tprint("/I%", IMGUI_PATH), tprint("/I%", SDL3_INCLUDE_PATH)], debug=compile_debug);
 
         if !success return false;
     }
