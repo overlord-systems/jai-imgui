@@ -1,10 +1,10 @@
 #import "Basic";
 
+#import "sdl3";
 
 // Import the imgui module (usually just '#import "imgui')
 #import,file "../module.jai";
 
-#import "sdl3";
 // Load the backend(s) you want. This *must* be #load because they might rely on other libraries.
 // In this case, sdl3_gpu3 relies on types from "sdl3", so by importing sdl3 and loading imgui, imgui
 // gets access to the types it needs.
