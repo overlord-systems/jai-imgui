@@ -194,23 +194,18 @@ compile_and_generate_bindings_backend_sdl3_gpu3 :: (compile_debug: bool) -> bool
         macos_arm64_version_arg := "-mmacos-version-min=11.0";  // Earliest version that supports arm64
 
         // x64 variant
-        success &&= build_cpp_dynamic_lib("backends/macos/ImGui_x64_sdl3_gpu3", ..src_files, extra = .["-arch", "x86_64", "-std=c++20", macos_x64_version_arg], debug=compile_debug);
-
         // @Hack: Is -fno-threadsafe-statics really the way to go? Without it, we get linker errors when using the static library
         // due to "__cxa_guard_acquire" et al not being defined. The library users probably need to link agains libc++ or something. But do we really want to enforce that?
-        success &&= build_cpp_static_lib( "backends/macos/ImGui_x64_sdl3_gpu3", ..src_files, extra = .["-arch", "x86_64", "-std=c++20", "-fno-exceptions", "-fno-rtti", "-fno-threadsafe-statics", macos_x64_version_arg], debug=compile_debug);
+        success = build_cpp_static_lib("backends/macos/ImGui_x64_sdl3_gpu3", ..src_files, extra = .["-arch", "x86_64", "-std=c++20", "-fno-exceptions", "-fno-rtti", "-fno-threadsafe-statics", macos_x64_version_arg, tprint("-I%", IMGUI_PATH), tprint("-I%", SDL3_INCLUDE_PATH)], debug=compile_debug);
+        assert(success, "build_cpp_static_lib('backends/macos/ImGui_x64_sdl3_gpu3'");
 
         // arm64 variant
-        success &&= build_cpp_dynamic_lib("backends/macos/ImGui_arm64_sdl3_gpu3", ..src_files, extra = .["-arch", "arm64",  "-std=c++20", macos_arm64_version_arg], debug=compile_debug);
-
-        success &&= build_cpp_static_lib( "backends/macos/ImGui_arm64_sdl3_gpu3", ..imgui_src_files, extra = .["-arch", "arm64",  "-std=c++20", "-fno-exceptions", "-fno-rtti", "-fno-threadsafe-statics", macos_arm64_version_arg], debug=compile_debug);
+        success = build_cpp_static_lib("backends/macos/ImGui_arm64_sdl3_gpu3", ..src_files, extra = .["-arch", "arm64",  "-std=c++20", "-fno-exceptions", "-fno-rtti", "-fno-threadsafe-statics", macos_arm64_version_arg, tprint("-I%", IMGUI_PATH), tprint("-I%", SDL3_INCLUDE_PATH)], debug=compile_debug);
+        assert(success, "build_cpp_static_lib('backends/macos/ImGui_arm64_sdl3_gpu3'");
 
         // create universal binaries
-        run_result := run_command("lipo", "-create", "backends/macos/ImGui_x64_sdl3_gpu3.dylib", "backends/macos/ImGui_arm64_sdl3_gpu3.dylib", "-output", "backends/macos/ImGui.dylib");
-        success &&= (run_result.exit_code == 0);
-
-        run_result =  run_command("lipo", "-create", "backends/macos/ImGui_x64_sdl3_gpu3.a", "backends/macos/ImGui_arm64_sdl3_gpu3.a", "-output", "backends/macos/ImGui.a");
-        success &&= (run_result.exit_code == 0);
+        run_result :=  run_command("lipo", "-create", "backends/macos/ImGui_x64_sdl3_gpu3.a", "backends/macos/ImGui_arm64_sdl3_gpu3.a", "-output", "backends/macos/ImGui_sdl3_gpu3.a");
+        success = (run_result.exit_code == 0);
 
     } else {
         log("only Windows/MacOS are currently supported for generating backends, however it should be easy to add more! check '%' for an idea how to add support for more platforms", #procedure_name(), flags=.ERROR);
