@@ -240,7 +240,7 @@ EOF
             }
 
             array_add(*libnames, "ImGui_sdl3_gpu3");
-            output_filename = "unix_sdl3_gpu3.jai";
+            output_filename = "backends/unix_sdl3_gpu3.jai";
             generate_library_declarations = false;
             footer = #string END
 #if OS == .MACOS imgui_sdl3_gpu3 :: #library,no_dll "backends/macos/ImGui_sdl3_gpu3";
