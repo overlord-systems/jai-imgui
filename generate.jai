@@ -156,7 +156,7 @@ EOF
         generate_compile_time_struct_checks = false;
         strip_flags |= .INLINED_FUNCTIONS; // "inline" functions are not present in the static library.
 
-        visitor   = imgui_visitor;
+        visitor = imgui_visitor;
         get_func_args_for_printing = imgui_get_function_arg_for_printing;
     }
 
@@ -180,7 +180,7 @@ compile_and_generate_bindings_backend_sdl3_gpu3 :: (compile_debug: bool) -> bool
         make_directory_if_it_does_not_exist("backends/windows");
 
         // We set IMGUI_DISABLE_WIN32_DEFAULT_IME_FUNCTIONS. Otherwise all users of the ImGui module have to link against "imm32".
-        success = build_cpp_static_lib("backends/windows/ImGui_sdl3_gpu3.static", ..src_files, extra = .["/DIMGUI_API=__declspec(dllexport)", "/DIMGUI_DISABLE_WIN32_DEFAULT_IME_FUNCTIONS", tprint("/I%", IMGUI_PATH), tprint("/I%", SDL3_INCLUDE_PATH)], debug=compile_debug);
+        success = build_cpp_static_lib("backends/windows/ImGui_sdl3_gpu3.static", ..src_files, extra = .["/DIMGUI_DISABLE_WIN32_DEFAULT_IME_FUNCTIONS", tprint("/I%", IMGUI_PATH), tprint("/I%", SDL3_INCLUDE_PATH)], debug=compile_debug);
 
         if !success return false;
 
@@ -259,7 +259,7 @@ END
         generate_compile_time_struct_checks = false;
         strip_flags |= .INLINED_FUNCTIONS; // "inline" functions are not present in the static library.
 
-        visitor   = imgui_visitor;
+        visitor = imgui_visitor;
         get_func_args_for_printing = imgui_get_function_arg_for_printing;
     }
 
