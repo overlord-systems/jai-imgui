@@ -456,7 +456,7 @@ imgui_get_function_arg_for_printing :: (func: *Function, type: *Function_Type, m
 
 FOOTER_UNIX :: #string END
 
-#if OS == .MACOS    imgui :: #library "macos/ImGui";
-#if OS == .LINUX    imgui :: #library "linux/ImGui";
+#if OS == .MACOS    imgui :: #library,no_dll "macos/ImGui";
+#if OS == .LINUX    imgui :: #library,no_dll "linux/ImGui";
 
 END
