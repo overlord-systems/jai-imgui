@@ -243,8 +243,8 @@ EOF
             output_filename = "backends/unix_sdl3_gpu3.jai";
             generate_library_declarations = false;
             footer = #string END
-#if OS == .MACOS imgui_sdl3_gpu3 :: #library,no_dll "backends/macos/ImGui_sdl3_gpu3";
-#if OS == .LINUX imgui_sdl3_gpu3 :: #library,no_dll "backends/linux/ImGui_sdl3_gpu3";
+#if OS == .MACOS imgui_sdl3_gpu3 :: #library,no_dll "macos/ImGui_sdl3_gpu3";
+#if OS == .LINUX imgui_sdl3_gpu3 :: #library,no_dll "linux/ImGui_sdl3_gpu3";
 END
         }
 
