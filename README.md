@@ -14,7 +14,13 @@ The SDL3 headers we are using to build the SDL3 backend are `SDL v3.2.14`. You c
 
 Check out `tests/test.jai` for a complete working example using the `sdl3_gpu3` backend. You can compile using `jai tests/test.jai` and then run with `./tests/test.exe`.
 
-Note: The main bindings should work on all platforms, but the backend currently only supports windows. It should be easy (trivial even) to add support for other platforms, just have to update `generate.jai` a bit. PRs welcome!
+The main Dear ImGui bindings are available for Windows x64 and MacOS x64/ARM64. The generator *should* work for Linux, but you will need to run `jai generate.jai` as we don't have them on the repo, and if that doesn't work you will need to update `generator.jai`.
+
+Backend support:
+
+- `sdl3_gpu3`: Windows x64 and MacOS x64/ARM64
+
+PRs welcome to add support for more platforms and backends!
 
 ## Updating Bindings
 
@@ -26,6 +32,16 @@ Note: Steps 1 to 3 are only if you want to update the Dear ImGui version.
 4. Run `jai generate.jai` to generate new bindings. If you want to rebuild binaries as well, do `jai generate.jai - -compile`.
 5. Regenerate bindings using `jai generate.jai - -backend_sdl3_gpu3`. You must run once per backend.
    1. If you want to update SDL3 headers, replace the `src/SDL3` folder with the new `include` folder from the [SDL3 repo](https://github.com/libsdl-org/SDL).
+
+### MacOS Note
+
+When generating MacOS bindings for the `sdl3_gpu3` backend, for some reason the generator can't find
+the library name for procedures and so almost nothing gets generated.
+
+To make it work, we make the generator output bindings with the library name as '__UnknownLib', and then
+we read the file, replace `#foreign __UnknownLib` with `#foreign imgui_sdl3_gpu3`, and `#elsewhere __UnknownLib` with `#elsewhere imgui_sdl3_gpu3`.
+
+Its a dirty hack, but works for now :)
 
 ## Backends
 
@@ -40,16 +56,6 @@ To compile a backend and then generate ImGui bindings and backend bindings: `jai
 Supported backends:
 
 - `sdl3_gpu3`
-
-### MacOS Notes
-
-When generating MacOS bindings for the `sdl3_gpu3` backend, for some reason the generator can't find
-the library name for procedures and so almost nothing gets generated.
-
-To make it work, we make the generator output bindings with the library name as '__UnknownLib', and then
-we read the file, replace `#foreign __UnknownLib` with `#foreign imgui_sdl3_gpu3`, and `#elsewhere __UnknownLib` with `#elsewhere imgui_sdl3_gpu3`.
-
-Its a dirty hack, but works for now :)
 
 ## Credits
 
