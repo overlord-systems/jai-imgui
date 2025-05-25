@@ -231,10 +231,24 @@ imgui_sdl3_gpu3 :: #library,no_dll "ImGui_sdl3_gpu3.static";
 EOF
 
         } else {
+
+            // "inline" functions are not present in the static library.
+            strip_flags |= .INLINED_FUNCTIONS;
+
             #if OS == .LINUX {
                 array_add(*libpaths, "backends/linux");
             } else #if OS == .MACOS {
+
                 array_add(*libpaths, "backends/macos");
+
+                // For some reason generation on macos doesn't find
+                // the library and so strips the functions we want them.
+                //
+                // So for now we avoid stripping them and then do the horrible hack
+                // below to replace '#foreign __UnknownLib' and '#elsewhere __UnknownLib'
+                // with '#foreign imgui_sdl3_gpu3'
+                strip_flags &= ~.SYMBOLS_WITH_UNKNOWN_FOREIGN_LIBS;
+
             } else {
                 assert(false);
             }
@@ -257,13 +271,38 @@ END
         auto_detect_enum_prefixes = false;
         log_stripped_declarations = false;
         generate_compile_time_struct_checks = false;
-        strip_flags |= .INLINED_FUNCTIONS; // "inline" functions are not present in the static library.
 
         visitor = imgui_visitor;
         get_func_args_for_printing = imgui_get_function_arg_for_printing;
     }
 
     success = generate_bindings(opts, output_filename);
+
+    // Horrible hack but...
+    #if OS == .MACOS {
+
+        success := false
+        defer {
+            if !success {
+                log("failed to replace invalid library name from generated MacOS bindings at '%'. You will have to manually replace '#foreign __UnknownLib' and '#elsewhere __UnknownLib' with '#foreign imgui_sdl3_gpu3' and '#elsewhere imgui_sdl3_gpu3'", file_path, flags=.ERROR);
+            }
+        }
+
+        file_path := "backends/unix_sdl3_gpu3.jai";
+        contents, success= := read_entire_file(file_path);
+        if success {
+            defer free(contents);
+
+            replace1 := replace(contents, "#foreign __UnknownLib", "#foreign imgui_sdl3_gpu3");
+            defer free(replace1);
+
+            replace2 := replace(contents, "#elsewhere __UnknownLib", "#elsewhere imgui_sdl3_gpu3");
+            defer free(replace2);
+
+            success = write_entire_file(file_path, replace2);
+        }
+    }
+
     return success;
 }
 

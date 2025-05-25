@@ -18,9 +18,11 @@ Note: The main bindings should work on all platforms, but the backend currently 
 
 ## Updating Bindings
 
+Note: Steps 1 to 3 are only if you want to update the Dear ImGui version.
+
 1. Clone this repo, then delete the `src/imgui` folder
 2. Clone Dear ImGui into `src/`
-3. Checkout to the `docking` branch (or don't, up to you), or any branch/commit you want
+3. Checkout to the `docking` branch or any branch/commit you want
 4. Run `jai generate.jai` to generate new bindings. If you want to rebuild binaries as well, do `jai generate.jai - -compile`.
 5. Regenerate bindings using `jai generate.jai - -backend_sdl3_gpu3`. You must run once per backend.
    1. If you want to update SDL3 headers, replace the `src/SDL3` folder with the new `include` folder from the [SDL3 repo](https://github.com/libsdl-org/SDL).
@@ -38,6 +40,16 @@ To compile a backend and then generate ImGui bindings and backend bindings: `jai
 Supported backends:
 
 - `sdl3_gpu3`
+
+### MacOS Notes
+
+When generating MacOS bindings for the `sdl3_gpu3` backend, for some reason the generator can't find
+the library name for procedures and so almost nothing gets generated.
+
+To make it work, we make the generator output bindings with the library name as '__UnknownLib', and then
+we read the file, replace `#foreign __UnknownLib` with `#foreign imgui_sdl3_gpu3`, and `#elsewhere __UnknownLib` with `#elsewhere imgui_sdl3_gpu3`.
+
+Its a dirty hack, but works for now :)
 
 ## Credits
 
