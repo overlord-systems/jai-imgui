@@ -281,7 +281,6 @@ END
     // Horrible hack but...
     #if OS == .MACOS {
 
-        success := false
         file_path := "backends/unix_sdl3_gpu3.jai";
         defer {
             if !success {
