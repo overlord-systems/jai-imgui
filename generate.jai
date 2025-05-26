@@ -282,13 +282,13 @@ END
     #if OS == .MACOS {
 
         success := false
+        file_path := "backends/unix_sdl3_gpu3.jai";
         defer {
             if !success {
                 log("failed to replace invalid library name from generated MacOS bindings at '%'. You will have to manually replace '#foreign __UnknownLib' and '#elsewhere __UnknownLib' with '#foreign imgui_sdl3_gpu3' and '#elsewhere imgui_sdl3_gpu3'", file_path, flags=.ERROR);
             }
         }
 
-        file_path := "backends/unix_sdl3_gpu3.jai";
         contents, success= := read_entire_file(file_path);
         if success {
             defer free(contents);
