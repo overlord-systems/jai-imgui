@@ -295,7 +295,7 @@ END
             replace1 := replace(contents, "#foreign __UnknownLib", "#foreign imgui_sdl3_gpu3");
             defer free(replace1);
 
-            replace2 := replace(contents, "#elsewhere __UnknownLib", "#elsewhere imgui_sdl3_gpu3");
+            replace2 := replace(replace1, "#elsewhere __UnknownLib", "#elsewhere imgui_sdl3_gpu3");
             defer free(replace2);
 
             success = write_entire_file(file_path, replace2);
