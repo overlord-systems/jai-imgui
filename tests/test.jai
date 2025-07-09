@@ -1,6 +1,6 @@
 #import "Basic";
 
-#import "sdl3";
+#import "Sdl3";
 
 // Import the imgui module (usually just '#import "imgui')
 #import,file "../module.jai";
