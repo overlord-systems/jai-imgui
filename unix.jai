@@ -1,7 +1,7 @@
 //
 // This file was auto-generated using the following command:
 //
-// jai generate.jai - -compile
+// jai generate.jai
 //
 
 
@@ -4136,6 +4136,6 @@ PlatformImeData :: struct {
 #import "Basic"; // For push_context
 
 
-#if OS == .MACOS    imgui :: #library "macos/ImGui";
-#if OS == .LINUX    imgui :: #library "linux/ImGui";
+#if OS == .MACOS    imgui :: #library,no_dll "macos/ImGui";
+#if OS == .LINUX    imgui :: #library,no_dll "linux/ImGui";
 

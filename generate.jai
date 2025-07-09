@@ -125,11 +125,7 @@ generate_imgui_bindings :: (args: [] string) -> bool {
             generate_library_declarations = false;
 
             footer = #string EOF
-#if USE_DYNAMIC_LIB {
-    imgui :: #library "ImGui";
-} else {
-    imgui :: #library,no_dll "ImGui.static";
-}
+imgui :: #library,no_dll "ImGui.static";
 EOF
 
         } else {
@@ -207,10 +203,16 @@ compile_and_generate_bindings_backend_sdl3_gpu3 :: (compile_debug: bool) -> bool
         run_result :=  run_command("lipo", "-create", "backends/macos/ImGui_x64_sdl3_gpu3.a", "backends/macos/ImGui_arm64_sdl3_gpu3.a", "-output", "backends/macos/ImGui_sdl3_gpu3.a");
         success = (run_result.exit_code == 0);
 
-    } else {
-        log("only Windows/MacOS are currently supported for generating backends, however it should be easy to add more! check '%' for an idea how to add support for more platforms", #procedure_name(), flags=.ERROR);
+    } else #if OS == .LINUX {
 
-        return false;
+        #import "Process";
+
+        make_directory_if_it_does_not_exist("backends/linux");
+
+        // @Hack: Is -fno-threadsafe-statics really the way to go? Without it, we get linker errors when using the static library
+        // due to "__cxa_guard_acquire" et al not being defined. The library users probably need to link agains libc++ or something. But do we really want to enforce that?
+        success = build_cpp_static_lib("backends/linux/ImGui_sdl3_gpu3", ..src_files, extra = .["-std=c++20", "-fno-exceptions", "-fno-rtti", "-fno-threadsafe-statics", tprint("-I%", IMGUI_PATH), tprint("-I%", SDL3_INCLUDE_PATH)], debug=compile_debug);
+        assert(success, "build_cpp_static_lib('backends/linux/ImGui_sdl3_gpu3'");
     }
 
     // Generate bindings

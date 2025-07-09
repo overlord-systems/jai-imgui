@@ -14,16 +14,17 @@ The SDL3 headers we are using to build the SDL3 backend are `SDL v3.2.14`. You c
 
 Check out `tests/test.jai` for a complete working example using the `sdl3_gpu3` backend. You can compile using `jai tests/test.jai` and then run with `./tests/test.exe`.
 
-The main Dear ImGui bindings are available for Windows x64 and MacOS x64/ARM64. The generator *should* work for Linux, but you will need to run `jai generate.jai` as we don't have them on the repo, and if that doesn't work you will need to update `generator.jai`.
+The Dear ImGui bindings are available for Windows x64, MacOS x64/ARM64, and Linux x64.
 
 Backend support:
 
-- `sdl3_gpu3`: Windows x64 and MacOS x64/ARM64
+- `sdl3_gpu3`: Windows x64, MacOS x64/ARM64, and Linux x64
 
 PRs welcome to add support for more platforms and backends!
 
 ## Updating Bindings
 
+Note: If you want to compile with `- -compile`, or generate a backend, [Clang](https://llvm.org) must be installed and in your path.
 Note: Steps 1 to 3 are only if you want to update the Dear ImGui version.
 
 1. Clone this repo, then delete the `src/imgui` folder

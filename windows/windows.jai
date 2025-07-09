@@ -3762,7 +3762,7 @@ ImFontConfig :: struct {
 // (Note: some language parsers may fail to convert the 31+1 bitfield members, in this case maybe drop store a single u32 or we can rework this)
 ImFontGlyph :: struct {
     __bitfield: u32;
-    /* 
+    /*
         Colored: u32; /* 1 bits */ // Flag to indicate glyph is colored and should generally ignore tinting (make it usable with no shift on little-endian as this is used in loops)
         Visible: u32; /* 1 bits */ // Flag to indicate glyph has no visible pixels (e.g. space). Allow early out when rendering.
         Codepoint: u32; /* 30 bits */ // 0x0000..0x10FFFF;
@@ -3800,7 +3800,7 @@ ImFontAtlasCustomRect :: struct {
     Width:         u16; // Input    // Desired rectangle dimension
     Height:        u16; // Input    // Desired rectangle dimension
     __bitfield:    u32;
-    /* 
+    /*
         GlyphID: u32; /* 31 bits */ // Input    // For custom font glyphs only (ID < 0x110000)
         GlyphColored: u32; /* 1 bits */ // Input  // For custom font glyphs only: glyph is colored, removed tinting.;
     */
@@ -4131,8 +4131,4 @@ PlatformImeData :: struct {
 
 #import "Basic"; // For push_context
 
-#if USE_DYNAMIC_LIB {
-    imgui :: #library "ImGui";
-} else {
-    imgui :: #library,no_dll "ImGui.static";
-}
+imgui :: #library,no_dll "ImGui.static";
