@@ -1,7 +1,7 @@
 //
 // This file was auto-generated using the following command:
 //
-// jai generate.jai - -compile
+// jai generate.jai
 //
 
 
@@ -2820,8 +2820,11 @@ TableColumnSortSpecs :: struct {
 // Defining a custom placement new() with a custom parameter allows us to bypass including <new> which on some platforms complains when user has disabled exceptions.
 //-----------------------------------------------------------------------------
 ImNewWrapper :: struct {
-    __empty_struct_padding: u8; // C++ makes empty structs have length 1
+    using imnewwrapper__raw: ImNewWrapper__RAW;
+    __empty_struct_padding:  u8; // C++ makes empty structs have length 1
 }
+// ImNewWrapper without empty struct padding. Needed to generate a C++-equivalent struct layout when "inheriting" from ImNewWrapper
+ImNewWrapper__RAW :: struct {}
 
 //-----------------------------------------------------------------------------
 // [SECTION] ImGuiStyle
@@ -3762,7 +3765,7 @@ ImFontConfig :: struct {
 // (Note: some language parsers may fail to convert the 31+1 bitfield members, in this case maybe drop store a single u32 or we can rework this)
 ImFontGlyph :: struct {
     __bitfield: u32;
-    /*
+    /* 
         Colored: u32; /* 1 bits */ // Flag to indicate glyph is colored and should generally ignore tinting (make it usable with no shift on little-endian as this is used in loops)
         Visible: u32; /* 1 bits */ // Flag to indicate glyph has no visible pixels (e.g. space). Allow early out when rendering.
         Codepoint: u32; /* 30 bits */ // 0x0000..0x10FFFF;
@@ -3800,7 +3803,7 @@ ImFontAtlasCustomRect :: struct {
     Width:         u16; // Input    // Desired rectangle dimension
     Height:        u16; // Input    // Desired rectangle dimension
     __bitfield:    u32;
-    /*
+    /* 
         GlyphID: u32; /* 31 bits */ // Input    // For custom font glyphs only (ID < 0x110000)
         GlyphColored: u32; /* 1 bits */ // Input  // For custom font glyphs only: glyph is colored, removed tinting.;
     */

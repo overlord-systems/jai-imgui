@@ -2820,8 +2820,11 @@ TableColumnSortSpecs :: struct {
 // Defining a custom placement new() with a custom parameter allows us to bypass including <new> which on some platforms complains when user has disabled exceptions.
 //-----------------------------------------------------------------------------
 ImNewWrapper :: struct {
-    __empty_struct_padding: u8; // C++ makes empty structs have length 1
+    using imnewwrapper__raw: ImNewWrapper__RAW;
+    __empty_struct_padding:  u8; // C++ makes empty structs have length 1
 }
+// ImNewWrapper without empty struct padding. Needed to generate a C++-equivalent struct layout when "inheriting" from ImNewWrapper
+ImNewWrapper__RAW :: struct {}
 
 //-----------------------------------------------------------------------------
 // [SECTION] ImGuiStyle

@@ -120,7 +120,9 @@ generate_imgui_bindings :: (args: [] string) -> bool {
         using opts;
 
         #if OS == .WINDOWS {
-            array_add(*libpaths, "windows");
+
+            array_add(*libraries, .{filename="ImGui.static"});
+            array_add(*library_search_paths, "windows");
             output_filename = "windows/windows.jai";
             generate_library_declarations = false;
 
@@ -129,19 +131,21 @@ imgui :: #library,no_dll "ImGui.static";
 EOF
 
         } else {
+
             #if OS == .LINUX {
-                array_add(*libpaths, "linux");
+                array_add(*library_search_paths, "linux");
             } else #if OS == .MACOS {
-                array_add(*libpaths, "macos");
+                array_add(*library_search_paths, "macos");
             } else {
                 assert(false);
             }
-            output_filename = "unix.jai";
-            generate_library_declarations = false;
+
             footer = FOOTER_UNIX;
+            output_filename = "unix.jai";
+            array_add(*libraries, .{filename="ImGui"});
+            generate_library_declarations = false;
         }
 
-        array_add(*libnames,      "ImGui");
         array_add(*include_paths, IMGUI_PATH);
         array_add(*source_files,  tprint("%/imgui.h", IMGUI_PATH));
         array_add(*extra_clang_arguments, "-x", "c++", "-DWIN32_LEAN_AND_MEAN");
@@ -223,8 +227,8 @@ compile_and_generate_bindings_backend_sdl3_gpu3 :: (compile_debug: bool) -> bool
 
         #if OS == .WINDOWS {
 
-            array_add(*libpaths, "backends/windows");
-            array_add(*libnames, "ImGui_sdl3_gpu3.static");
+            array_add(*library_search_paths, "backends/windows");
+            array_add(*libraries, .{filename="ImGui_sdl3_gpu3.static"});
             output_filename = "backends/windows/windows_sdl3_gpu3.jai";
             generate_library_declarations = false;
 
@@ -238,10 +242,10 @@ EOF
             strip_flags |= .INLINED_FUNCTIONS;
 
             #if OS == .LINUX {
-                array_add(*libpaths, "backends/linux");
+                array_add(*library_search_paths, "backends/linux");
             } else #if OS == .MACOS {
 
-                array_add(*libpaths, "backends/macos");
+                array_add(*library_search_paths, "backends/macos");
 
                 // For some reason generation on macos doesn't find
                 // the library and so strips the functions we want them.
@@ -255,7 +259,7 @@ EOF
                 assert(false);
             }
 
-            array_add(*libnames, "ImGui_sdl3_gpu3");
+            array_add(*libraries, .{filename="ImGui_sdl3_gpu3"});
             output_filename = "backends/unix_sdl3_gpu3.jai";
             generate_library_declarations = false;
             footer = #string END
