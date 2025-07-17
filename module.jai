@@ -31,4 +31,3 @@ ImDrawCallback :: #type (parent_list: *ImDrawList, cmd: *ImDrawCmd) #c_call;
 } else {
     #load "unix.jai";
 }
-
