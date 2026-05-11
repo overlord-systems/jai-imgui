@@ -37,7 +37,8 @@ main :: () {
     success := SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD | SDL_INIT_AUDIO);
     ok_or_exit(success, "failed to init sdl3 with error = %", consume_sdl_error());
 
-    window := SDL_CreateWindow("Overlord Systems", 1920, 1080, SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIDDEN | SDL_WINDOW_HIGH_PIXEL_DENSITY);
+    win_scale := SDL_GetDisplayContentScale(SDL_GetPrimaryDisplay());
+    window := SDL_CreateWindow("Overlord Systems", (1920 * win_scale).(s32), (1080 * win_scale).(s32), SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIDDEN | SDL_WINDOW_HIGH_PIXEL_DENSITY);
     ok_or_exit(window != null, "failed to create window with error = %", consume_sdl_error());
 
     SDL_SetWindowPosition(window, xx SDL_WINDOWPOS_CENTERED(), xx SDL_WINDOWPOS_CENTERED());
@@ -69,6 +70,11 @@ main :: () {
         style.Colors[Col.WindowBg].w = 1;
     }
 
+    style.ScaleAllSizes(style, win_scale);   // Bake a fixed style scale. (until we have a solution for dynamic style scaling, changing this requires resetting Style + calling this again)
+    style.FontScaleDpi = win_scale;   // Set initial font scale. (in docking branch: using io.ConfigDpiScaleFonts=true automatically overrides this for every window depending on the current monitor)
+    io.ConfigDpiScaleFonts = true;     // [Experimental] Automatically overwrite style.FontScaleDpi in Begin() when Monitor DPI changes. This will scale fonts but _NOT_ scale sizes/padding for now.
+    io.ConfigDpiScaleViewports = true; // [Experimental] Scale Dear ImGui and Platform Windows when Monitor DPI changes.
+
     // Setup imgui sdl3_gpu3 backend
     success = ImplSDL3_InitForSDLGPU(window);
     ok_or_exit(success, "failed to InitForSDLGPU with error = %", consume_sdl_error());
@@ -97,16 +103,16 @@ main :: () {
             // Send events to imgui through the backend, then do our processing
             event_consumed := ImplSDL3_ProcessEvent(*ev);
 
-            if ev.type == {
+            if ev.type.(SDL_EventType) == {
 
-                case xx SDL_EventType.QUIT;
+                case SDL_EventType.QUIT;
                     is_running = false;
 
-                case xx SDL_EventType.KEY_DOWN;
+                case SDL_EventType.KEY_DOWN;
                     if ev.key.key == SDLK_ESCAPE
                         is_running = false;
 
-                case xx SDL_EventType.WINDOW_CLOSE_REQUESTED;
+                case SDL_EventType.WINDOW_CLOSE_REQUESTED;
                     if ev.window.windowID == SDL_GetWindowID(window)
                         is_running = false;
                 case;
@@ -145,9 +151,6 @@ main :: () {
 
         swapchain_texture: *SDL_GPUTexture;
         success = SDL_AcquireGPUSwapchainTexture(cmd_buffer, window, *swapchain_texture, null, null);
-        // if !success {
-        //     log("failed to acquire gpu swapchain texture with error = %", consume_sdl_error());
-        // }
 
         // If all good we will do a render pass that draws the UI
         if swapchain_texture && !is_minimized {
