@@ -268,7 +268,7 @@ EOF
                 array_add(*library_search_paths, "backends/macos");
 
                 // For some reason generation on macos doesn't find
-                // the library and so strips the functions we want them.
+                // the library and so strips the functions we want.
                 //
                 // So for now we avoid stripping them and then do the horrible hack
                 // below to replace '#foreign __UnknownLib' and '#elsewhere __UnknownLib'
@@ -479,7 +479,7 @@ END
     success = generate_bindings(opts, output_filename);
 
     // Horrible macOS hack
-    #if OS == .MACOS && false {
+    #if OS == .MACOS {
 
         file_path := "misc/freetype/unix_freetype.jai";
         defer {

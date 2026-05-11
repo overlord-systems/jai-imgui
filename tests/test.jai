@@ -55,7 +55,7 @@ main :: () {
     success = SDL_ClaimWindowForGPUDevice(gpu_device, window);
     ok_or_exit(success, "failed to claim window with title '%' for gpu device with error = %", to_string(SDL_GetWindowTitle(window)), consume_sdl_error());
 
-    success = SDL_SetGPUSwapchainParameters(gpu_device, window, .SDR, .MAILBOX);
+    success = SDL_SetGPUSwapchainParameters(gpu_device, window, .SDR, .VSYNC);
     ok_or_exit(success, "failed to set swapchain parameters with error = %", consume_sdl_error());
 
     // Setup ImGui
