@@ -34,6 +34,9 @@ DEBUG :: true;
 
 main :: () {
 
+    // Keep freetype from being removed by the compiler
+    FT_Error_String(0);
+
     // Setup window and gpu using the SDL3_GPU3 backend.
     // This is based on the 'example_sdl3_sdlgpu3' Dear ImGui example, which you can find on their repo.
     success := SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD | SDL_INIT_AUDIO);
@@ -62,7 +65,12 @@ main :: () {
     ctx := CreateContext();
     io := GetIO();
 
+    // Enable freetype rendering
+    io.Fonts.SetFontLoader(io.Fonts, FreeType.GetFontLoader());
+
+    // Other IO setup
     io.ConfigFlags_ |= .DockingEnable | .ViewportsEnable | .DpiEnableScaleViewports | .DpiEnableScaleFonts | .NavEnableKeyboard | .NavEnableGamepad;
+
     StyleColorsDark();
 
     // When viewports are enabled we tweak WindowRounding/WindowBg so platform windows can look identical to regular ones.
@@ -79,9 +87,6 @@ main :: () {
     io.ConfigDpiScaleFonts = true;     // [Experimental] Automatically overwrite style.FontScaleDpi in Begin() when Monitor DPI changes. This will scale fonts but _NOT_ scale sizes/padding for now.
     io.ConfigDpiScaleViewports = true; // [Experimental] Scale Dear ImGui and Platform Windows when Monitor DPI changes.
 
-    // Enable freetype rendering
-    io.Fonts.SetFontLoader(io.Fonts, FreeType.GetFontLoader());
-
     // Setup imgui sdl3_gpu3 backend
     success = ImplSDL3_InitForSDLGPU(window);
     ok_or_exit(success, "failed to InitForSDLGPU with error = %", consume_sdl_error());
@@ -90,6 +95,8 @@ main :: () {
         Device = gpu_device,
         ColorTargetFormat = SDL_GetGPUSwapchainTextureFormat(gpu_device, window),
         MSAASamples = .SDL_GPU_SAMPLECOUNT_1,
+        SwapchainComposition = .SDL_GPU_SWAPCHAINCOMPOSITION_SDR,
+        PresentMode = .SDL_GPU_PRESENTMODE_VSYNC,
     };
 
     success = ImplSDLGPU3_Init(*init_info);

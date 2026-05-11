@@ -171,7 +171,7 @@ EOF
 
         array_add(*include_paths, IMGUI_PATH);
         array_add(*source_files,  tprint("%/imgui.h", IMGUI_PATH));
-        array_add(*extra_clang_arguments, "-x", "c++", "-DWIN32_LEAN_AND_MEAN");
+        array_add(*extra_clang_arguments, "-x", "c++", "-DWIN32_LEAN_AND_MEAN", "-DIMGUI_USE_WCHAR32");
         array_add(*flatten_namespaces, "ImGui");
         array_add(*strip_prefixes, "ImGui");
         auto_detect_enum_prefixes = false;
@@ -203,7 +203,7 @@ compile_and_generate_bindings_backend_sdl3_gpu3 :: (compile_debug: bool) -> bool
         make_directory_if_it_does_not_exist("backends/windows", recursive=true);
 
         // We set IMGUI_DISABLE_WIN32_DEFAULT_IME_FUNCTIONS. Otherwise all users of the ImGui module have to link against "imm32".
-        success = build_cpp_static_lib("backends/windows/ImGui_sdl3_gpu3.static", ..src_files, extra = .["/DIMGUI_DISABLE_WIN32_DEFAULT_IME_FUNCTIONS", tprint("/I%", IMGUI_PATH), tprint("/I%", SDL3_INCLUDE_PATH)], debug=compile_debug);
+        success = build_cpp_static_lib("backends/windows/ImGui_sdl3_gpu3.static", ..src_files, extra = .["/DIMGUI_DISABLE_WIN32_DEFAULT_IME_FUNCTIONS", "/DIMGUI_USE_WCHAR32", tprint("/I%", IMGUI_PATH), tprint("/I%", SDL3_INCLUDE_PATH)], debug=compile_debug);
 
         if !success return false;
 
@@ -216,11 +216,11 @@ compile_and_generate_bindings_backend_sdl3_gpu3 :: (compile_debug: bool) -> bool
         // x64 variant
         // @Hack: Is -fno-threadsafe-statics really the way to go? Without it, we get linker errors when using the static library
         // due to "__cxa_guard_acquire" et al not being defined. The library users probably need to link agains libc++ or something. But do we really want to enforce that?
-        success = build_cpp_static_lib("backends/macos/ImGui_x64_sdl3_gpu3", ..src_files, extra = .["-arch", "x86_64", "-std=c++20", "-fno-exceptions", "-fno-rtti", "-fno-threadsafe-statics", macos_x64_version_arg, tprint("-I%", IMGUI_PATH), tprint("-I%", SDL3_INCLUDE_PATH)], debug=compile_debug);
+        success = build_cpp_static_lib("backends/macos/ImGui_x64_sdl3_gpu3", ..src_files, extra = .["-arch", "x86_64", "-std=c++20", "-fno-exceptions", "-fno-rtti", "-fno-threadsafe-statics", "-DIMGUI_USE_WCHAR32", macos_x64_version_arg, tprint("-I%", IMGUI_PATH), tprint("-I%", SDL3_INCLUDE_PATH)], debug=compile_debug);
         assert(success, "build_cpp_static_lib('backends/macos/ImGui_x64_sdl3_gpu3'");
 
         // arm64 variant
-        success = build_cpp_static_lib("backends/macos/ImGui_arm64_sdl3_gpu3", ..src_files, extra = .["-arch", "arm64",  "-std=c++20", "-fno-exceptions", "-fno-rtti", "-fno-threadsafe-statics", macos_arm64_version_arg, tprint("-I%", IMGUI_PATH), tprint("-I%", SDL3_INCLUDE_PATH)], debug=compile_debug);
+        success = build_cpp_static_lib("backends/macos/ImGui_arm64_sdl3_gpu3", ..src_files, extra = .["-arch", "arm64",  "-std=c++20", "-fno-exceptions", "-fno-rtti", "-fno-threadsafe-statics", "-DIMGUI_USE_WCHAR32", macos_arm64_version_arg, tprint("-I%", IMGUI_PATH), tprint("-I%", SDL3_INCLUDE_PATH)], debug=compile_debug);
         assert(success, "build_cpp_static_lib('backends/macos/ImGui_arm64_sdl3_gpu3'");
 
         // create universal binaries
@@ -235,7 +235,7 @@ compile_and_generate_bindings_backend_sdl3_gpu3 :: (compile_debug: bool) -> bool
 
         // @Hack: Is -fno-threadsafe-statics really the way to go? Without it, we get linker errors when using the static library
         // due to "__cxa_guard_acquire" et al not being defined. The library users probably need to link agains libc++ or something. But do we really want to enforce that?
-        success = build_cpp_static_lib("backends/linux/ImGui_sdl3_gpu3", ..src_files, extra = .["-std=c++20", "-fno-exceptions", "-fno-rtti", "-fno-threadsafe-statics", tprint("-I%", IMGUI_PATH), tprint("-I%", SDL3_INCLUDE_PATH)], debug=compile_debug);
+        success = build_cpp_static_lib("backends/linux/ImGui_sdl3_gpu3", ..src_files, extra = .["-std=c++20", "-fno-exceptions", "-fno-rtti", "-fno-threadsafe-statics", "-DIMGUI_USE_WCHAR32", tprint("-I%", IMGUI_PATH), tprint("-I%", SDL3_INCLUDE_PATH)], debug=compile_debug);
         assert(success, "build_cpp_static_lib('backends/linux/ImGui_sdl3_gpu3'");
     }
 
@@ -290,7 +290,7 @@ END
 
         array_add(*include_paths, IMGUI_PATH, SDL3_INCLUDE_PATH);
         array_add(*source_files, tprint("%/backends/imgui_impl_sdl3.h", IMGUI_PATH), tprint("%/backends/imgui_impl_sdlgpu3.h", IMGUI_PATH));
-        array_add(*extra_clang_arguments, "-x", "c++", "-DWIN32_LEAN_AND_MEAN");
+        array_add(*extra_clang_arguments, "-x", "c++", "-DWIN32_LEAN_AND_MEAN", "-DIMGUI_USE_WCHAR32");
         array_add(*flatten_namespaces, "ImGui");
         array_add(*strip_prefixes, "ImGui", "Imgui");
 
@@ -350,6 +350,7 @@ compile_and_generate_bindings_freetype :: (compile_debug: bool) -> bool {
                 tprint("/I%", IMGUI_PATH),
                 tprint("/I%", FREETYPE_INCLUDE_PATH),
                 tprint("/I%", join(IMGUI_PATH, "/misc/freetype",, temp)),
+                "/DIMGUI_USE_WCHAR32",
             ],
             debug=compile_debug);
 
@@ -366,7 +367,8 @@ compile_and_generate_bindings_freetype :: (compile_debug: bool) -> bool {
                 tprint("-I%", IMGUI_PATH),
                 tprint("-I%", FREETYPE_INCLUDE_PATH),
                 tprint("-I%", join(IMGUI_PATH, "/misc/freetype",, temp)),
-                "-fno-exceptions", "-fno-rtti", "-fno-threadsafe-statics", "-fPIC"
+                "-fno-exceptions", "-fno-rtti", "-fno-threadsafe-statics", "-fPIC",
+                "-DIMGUI_USE_WCHAR32",
             ],
             debug=compile_debug);
 
@@ -385,7 +387,8 @@ compile_and_generate_bindings_freetype :: (compile_debug: bool) -> bool {
                 macos_x64_version_arg,
                 tprint("-I%", IMGUI_PATH),
                 tprint("-I%", FREETYPE_INCLUDE_PATH),
-                tprint("-I%", join(IMGUI_PATH, "/misc/freetype"))
+                join("-I", IMGUI_PATH, "/misc/freetype",, temp),
+                "-DIMGUI_USE_WCHAR32",
             ],
             debug=compile_debug);
         assert(success, "build_cpp_static_lib('misc/freetype/macos/ImGui_freetype_x64'");
@@ -397,7 +400,8 @@ compile_and_generate_bindings_freetype :: (compile_debug: bool) -> bool {
                 macos_arm64_version_arg,
                 tprint("-I%", IMGUI_PATH),
                 tprint("-I%", FREETYPE_INCLUDE_PATH),
-                tprint("-I%", join(IMGUI_PATH, "/misc/freetype"))
+                join("-I", IMGUI_PATH, "/misc/freetype",, temp),
+                "-DIMGUI_USE_WCHAR32",
             ],
             debug=compile_debug);
         assert(success, "build_cpp_static_lib('misc/freetype/macos/ImGui_freetype_arm64'");
@@ -461,7 +465,7 @@ END
         array_add(*source_files,
             tprint("%/misc/freetype/imgui_freetype.h", IMGUI_PATH)
         );
-        array_add(*extra_clang_arguments, "-x", "c++", "-DWIN32_LEAN_AND_MEAN");
+        array_add(*extra_clang_arguments, "-x", "c++", "-DWIN32_LEAN_AND_MEAN", "-DIMGUI_USE_WCHAR32");
         array_add(*strip_prefixes, "ImGui", "Imgui");
 
         auto_detect_enum_prefixes = false;
