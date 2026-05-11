@@ -108,7 +108,6 @@ generate_imgui_bindings :: (args: [] string) -> bool {
         return success;
     }
 
-    init(*enums_for_typedefs);
     defer {
         deinit(*enums_for_typedefs);
         array_reset(*begin_end_string_args);
@@ -393,7 +392,7 @@ imgui_visitor :: (decl: *Declaration, parent_decl: *Declaration) -> Declaration_
     {
         old_name := decl.type.type_of_typedef.name;
         if old_name {
-            found, en := table_find_new(*enums_for_typedefs, old_name);
+            found, en := table_find(*enums_for_typedefs, old_name);
             if found {
                 change_type_to_enum(decl, en);
             }
@@ -450,7 +449,7 @@ imgui_get_function_arg_for_printing :: (func: *Function, type: *Function_Type, m
                     // For the outer wrapper, remove any "_begin" part of the argument, and
                     // change its type to a jai string
                     arg_copy := New(Declaration);
-                    (<<arg_copy) = <<it;
+                    arg_copy.* = it.*;
                     arg_copy.type = context.generator.type_def_jai_string;
                     if ends_with(it.name, "_begin") {
                         arg_copy.output_name = slice(it.name, 0, it.name.count - "_begin".count);
@@ -470,12 +469,12 @@ imgui_get_function_arg_for_printing :: (func: *Function, type: *Function_Type, m
                     }
 
                     arg_copy := New(Declaration);
-                    (<<arg_copy) = <<it;
+                    arg_copy.* = it.*;
                     arg_copy.output_name = tprint("%.data", base_arg_name);
                     array_add(*args, arg_copy);
 
                     arg_copy_2 := New(Declaration);
-                    (<<arg_copy_2) = <<it;
+                    arg_copy_2.* = it.*;
                     arg_copy_2.output_name = tprint("%.data + %.count", base_arg_name, base_arg_name);
                     array_add(*args, arg_copy_2);
 
