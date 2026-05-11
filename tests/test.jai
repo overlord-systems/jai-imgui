@@ -1,6 +1,6 @@
-#import "Basic";
-
 #import "Sdl3";
+#import "Basic";
+#import "freetype";
 
 // Import the imgui module (usually just '#import "imgui')
 #import,file "../module.jai";
@@ -9,6 +9,8 @@
 // In this case, sdl3_gpu3 relies on types from "sdl3", so by importing sdl3 and loading imgui, imgui
 // gets access to the types it needs.
 #load "../backends/sdl3_gpu3.jai";
+
+#load "../misc/freetype/freetype.jai";
 
 // Calls SDL_GetError then SDL_ClearError
 //
@@ -73,8 +75,12 @@ main :: () {
     style.ScaleAllSizes(style, win_scale);   // Bake a fixed style scale. (until we have a solution for dynamic style scaling, changing this requires resetting Style + calling this again)
     style.FontScaleMain = win_scale;
     style.FontScaleDpi = win_scale;   // Set initial font scale. (in docking branch: using io.ConfigDpiScaleFonts=true automatically overrides this for every window depending on the current monitor)
+
     io.ConfigDpiScaleFonts = true;     // [Experimental] Automatically overwrite style.FontScaleDpi in Begin() when Monitor DPI changes. This will scale fonts but _NOT_ scale sizes/padding for now.
     io.ConfigDpiScaleViewports = true; // [Experimental] Scale Dear ImGui and Platform Windows when Monitor DPI changes.
+
+    // Enable freetype rendering
+    io.Fonts.SetFontLoader(io.Fonts, FreeType.GetFontLoader());
 
     // Setup imgui sdl3_gpu3 backend
     success = ImplSDL3_InitForSDLGPU(window);

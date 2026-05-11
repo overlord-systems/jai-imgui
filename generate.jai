@@ -2,8 +2,9 @@
 // jai compiler beta 0.2.012, built 11 May 2025.
 
 // We don’t ship the Dear ImGui source with the compiler. Download a Dear ImGui release and update this path if you want to re-generate the bindings.
-IMGUI_PATH :: "src/imgui"; // Docking e11ad6b77e5c7f7ed28467fec42fe2c72068b68e (a bit after v1.91.9b)
+IMGUI_PATH :: "src/imgui"; // v1.92.7-docking
 SDL3_INCLUDE_PATH :: "src/include"; // Used for SDL v3.2.14
+FREETYPE_INCLUDE_PATH :: "src/include/freetype-2.12.1";
 
 DECLARATIONS_TO_OMIT :: string.[
     // We have custom declarations for these in module.jai:
@@ -18,6 +19,9 @@ DECLARATIONS_TO_OMIT :: string.[
 
     "ImDrawCallback_ResetRenderState", // casting an integer to a function pointer is not supported in Jai.
 ];
+
+macos_x64_version_arg   := "-mmacos-version-min=10.13"; // Our current x64 min version
+macos_arm64_version_arg := "-mmacos-version-min=11.0";  // Earliest version that supports arm64
 
 #run,stallable {
 
@@ -37,7 +41,8 @@ generate_imgui_bindings :: (args: [] string) -> bool {
     no_demo := array_find(args, "-no_demo");
     compile := array_find(args, "-compile");
     compile_debug := array_find(args, "-debug");
-    backend_sdl3_gpu3 := array_find(args, "-backend_sdl3_gpu3");
+    compile_and_gen_backend_sdl3_gpu3 := array_find(args, "-backend_sdl3_gpu3");
+    compile_and_gen_freetype := array_find(args, "-freetype");
 
     if compile {
 
@@ -56,37 +61,51 @@ generate_imgui_bindings :: (args: [] string) -> bool {
 
             make_directory_if_it_does_not_exist("windows");
 
-            success &&= build_cpp_dynamic_lib("windows/ImGui", ..imgui_src_files, extra = .["/DIMGUI_API=__declspec(dllexport)"], debug=compile_debug);
+            success &&= build_cpp_dynamic_lib(
+                "windows/ImGui",
+                ..imgui_src_files,
+                extra=.[
+                    "/DIMGUI_API=__declspec(dllexport)",
+                    "/DIMGUI_USE_WCHAR32",
+                ],
+                debug=compile_debug,
+            );
 
             // We set IMGUI_DISABLE_WIN32_DEFAULT_IME_FUNCTIONS. Otherwise all users of the ImGui module have to link against "imm32".
-            success &&= build_cpp_static_lib("windows/ImGui.static", ..imgui_src_files, extra = .["/DIMGUI_API=__declspec(dllexport)", "/DIMGUI_DISABLE_WIN32_DEFAULT_IME_FUNCTIONS"], debug=compile_debug);
+            success &&= build_cpp_static_lib(
+                "windows/ImGui.static",
+                ..imgui_src_files,
+                extra=.[
+                    "/DIMGUI_API=__declspec(dllexport)",
+                    "/DIMGUI_DISABLE_WIN32_DEFAULT_IME_FUNCTIONS",
+                    "/DIMGUI_USE_WCHAR32",
+                ],
+                debug=compile_debug,
+            );
 
         } else #if OS == .LINUX {
             make_directory_if_it_does_not_exist("linux");
-            success &&= build_cpp_dynamic_lib("linux/ImGui", ..imgui_src_files, debug=compile_debug);
+            success &&= build_cpp_dynamic_lib("linux/ImGui", ..imgui_src_files, debug=compile_debug, extra=.["-DIMGUI_USE_WCHAR32"]);
             // @Hack: Is -fno-threadsafe-statics really the way to go? Without it, we get linker errors when using the static library
             // due to "__cxa_guard_acquire" et al not being defined. The library users probably need to link agains libc++ or something. But do we really want to enforce that?
-            success &&= build_cpp_static_lib("linux/ImGui", ..imgui_src_files, extra = .["-fno-exceptions", "-fno-rtti", "-fno-threadsafe-statics", "-fPIC"], debug=compile_debug);
+            success &&= build_cpp_static_lib("linux/ImGui", ..imgui_src_files, extra = .["-fno-exceptions", "-fno-rtti", "-fno-threadsafe-statics", "-fPIC", "-DIMGUI_USE_WCHAR32"], debug=compile_debug);
         } else #if OS == .MACOS {
 
             #import "Process";
 
             make_directory_if_it_does_not_exist("macos");
 
-            macos_x64_version_arg   := "-mmacos-version-min=10.13"; // Our current x64 min version
-            macos_arm64_version_arg := "-mmacos-version-min=11.0";  // Earliest version that supports arm64
-
             // x64 variant
-            success &&= build_cpp_dynamic_lib("macos/ImGui_x64", ..imgui_src_files, extra = .["-arch", "x86_64", "-std=c++20", macos_x64_version_arg], debug=compile_debug);
+            success &&= build_cpp_dynamic_lib("macos/ImGui_x64", ..imgui_src_files, extra = .["-arch", "x86_64", "-std=c++20", macos_x64_version_arg, "-DIMGUI_USE_WCHAR32"], debug=compile_debug);
 
             // @Hack: Is -fno-threadsafe-statics really the way to go? Without it, we get linker errors when using the static library
             // due to "__cxa_guard_acquire" et al not being defined. The library users probably need to link agains libc++ or something. But do we really want to enforce that?
-            success &&= build_cpp_static_lib( "macos/ImGui_x64", ..imgui_src_files, extra = .["-arch", "x86_64", "-std=c++20", "-fno-exceptions", "-fno-rtti", "-fno-threadsafe-statics", macos_x64_version_arg], debug=compile_debug);
+            success &&= build_cpp_static_lib( "macos/ImGui_x64", ..imgui_src_files, extra = .["-arch", "x86_64", "-std=c++20", "-fno-exceptions", "-fno-rtti", "-fno-threadsafe-statics", macos_x64_version_arg, "-DIMGUI_USE_WCHAR32"], debug=compile_debug);
 
             // arm64 variant
-            success &&= build_cpp_dynamic_lib("macos/ImGui_arm64", ..imgui_src_files, extra = .["-arch", "arm64",  "-std=c++20", macos_arm64_version_arg], debug=compile_debug);
+            success &&= build_cpp_dynamic_lib("macos/ImGui_arm64", ..imgui_src_files, extra = .["-arch", "arm64",  "-std=c++20", macos_arm64_version_arg, "-DIMGUI_USE_WCHAR32"], debug=compile_debug);
 
-            success &&= build_cpp_static_lib( "macos/ImGui_arm64", ..imgui_src_files, extra = .["-arch", "arm64",  "-std=c++20", "-fno-exceptions", "-fno-rtti", "-fno-threadsafe-statics", macos_arm64_version_arg], debug=compile_debug);
+            success &&= build_cpp_static_lib( "macos/ImGui_arm64", ..imgui_src_files, extra = .["-arch", "arm64",  "-std=c++20", "-fno-exceptions", "-fno-rtti", "-fno-threadsafe-statics", macos_arm64_version_arg, "-DIMGUI_USE_WCHAR32"], debug=compile_debug);
 
             // create universal binaries
             run_result := run_command("lipo", "-create", "macos/ImGui_x64.dylib", "macos/ImGui_arm64.dylib", "-output", "macos/ImGui.dylib");
@@ -103,8 +122,13 @@ generate_imgui_bindings :: (args: [] string) -> bool {
     }
 
     // We return if we generate a backend because bindings generator crashes if we do more than one generation per run
-    if backend_sdl3_gpu3 {
+    if compile_and_gen_backend_sdl3_gpu3 {
         success := compile_and_generate_bindings_backend_sdl3_gpu3(compile_debug);
+        return success;
+    }
+
+    if compile_and_gen_freetype {
+        success := compile_and_generate_bindings_freetype(compile_debug);
         return success;
     }
 
@@ -169,14 +193,14 @@ compile_and_generate_bindings_backend_sdl3_gpu3 :: (compile_debug: bool) -> bool
     array_add(*prefixes_to_keep, "ImGui_ImplSDL3_", "ImGui_ImplSDLGPU3_");
 
     src_files := string.[
-        sprint("%/backends/imgui_impl_sdl3.cpp", IMGUI_PATH),
-        sprint("%/backends/imgui_impl_sdlgpu3.cpp", IMGUI_PATH),
+        tprint("%/backends/imgui_impl_sdl3.cpp", IMGUI_PATH),
+        tprint("%/backends/imgui_impl_sdlgpu3.cpp", IMGUI_PATH),
     ];
 
     // Generate binaries
     #if OS == .WINDOWS {
 
-        make_directory_if_it_does_not_exist("backends/windows");
+        make_directory_if_it_does_not_exist("backends/windows", recursive=true);
 
         // We set IMGUI_DISABLE_WIN32_DEFAULT_IME_FUNCTIONS. Otherwise all users of the ImGui module have to link against "imm32".
         success = build_cpp_static_lib("backends/windows/ImGui_sdl3_gpu3.static", ..src_files, extra = .["/DIMGUI_DISABLE_WIN32_DEFAULT_IME_FUNCTIONS", tprint("/I%", IMGUI_PATH), tprint("/I%", SDL3_INCLUDE_PATH)], debug=compile_debug);
@@ -187,10 +211,7 @@ compile_and_generate_bindings_backend_sdl3_gpu3 :: (compile_debug: bool) -> bool
 
         #import "Process";
 
-        make_directory_if_it_does_not_exist("backends/macos");
-
-        macos_x64_version_arg   := "-mmacos-version-min=10.13"; // Our current x64 min version
-        macos_arm64_version_arg := "-mmacos-version-min=11.0";  // Earliest version that supports arm64
+        make_directory_if_it_does_not_exist("backends/macos", recursive=true);
 
         // x64 variant
         // @Hack: Is -fno-threadsafe-statics really the way to go? Without it, we get linker errors when using the static library
@@ -210,7 +231,7 @@ compile_and_generate_bindings_backend_sdl3_gpu3 :: (compile_debug: bool) -> bool
 
         #import "Process";
 
-        make_directory_if_it_does_not_exist("backends/linux");
+        make_directory_if_it_does_not_exist("backends/linux", recursive=true);
 
         // @Hack: Is -fno-threadsafe-statics really the way to go? Without it, we get linker errors when using the static library
         // due to "__cxa_guard_acquire" et al not being defined. The library users probably need to link agains libc++ or something. But do we really want to enforce that?
@@ -301,6 +322,176 @@ END
             defer free(replace1);
 
             replace2 := replace(replace1, "#elsewhere __UnknownLib", "#elsewhere imgui_sdl3_gpu3");
+            defer free(replace2);
+
+            success = write_entire_file(file_path, replace2);
+        }
+    }
+
+    return success;
+}
+
+compile_and_generate_bindings_freetype :: (compile_debug: bool) -> bool {
+
+    success := false;
+    array_add(*prefixes_to_keep, "ImGuiFreeType", "ImGui_ImplFreeType");
+
+    src_files := string.[
+        tprint("%/misc/freetype/imgui_freetype.cpp", IMGUI_PATH),
+    ];
+
+    // Generate binaries
+    #if OS == .WINDOWS {
+
+        make_directory_if_it_does_not_exist("misc/freetype/windows", recursive=true);
+
+        success = build_cpp_static_lib("misc/freetype/windows/ImGui_freetype.static", ..src_files,
+            extra = .[
+                tprint("/I%", IMGUI_PATH),
+                tprint("/I%", FREETYPE_INCLUDE_PATH),
+                tprint("/I%", join(IMGUI_PATH, "/misc/freetype",, temp)),
+            ],
+            debug=compile_debug);
+
+        if !success return false;
+
+    } else #if OS == .LINUX {
+
+        #import "Process";
+
+        make_directory_if_it_does_not_exist("misc/freetype/linux");
+
+        success = build_cpp_static_lib("misc/freetype/linux/ImGui_freetype", ..src_files,
+            extra = .[
+                tprint("-I%", IMGUI_PATH),
+                tprint("-I%", FREETYPE_INCLUDE_PATH),
+                tprint("-I%", join(IMGUI_PATH, "/misc/freetype",, temp)),
+                "-fno-exceptions", "-fno-rtti", "-fno-threadsafe-statics", "-fPIC"
+            ],
+            debug=compile_debug);
+
+        assert(success, "build_cpp_static_lib('misc/freetype/linux/ImGui_freetype'");
+
+    } else #if OS == .MACOS {
+
+        #import "Process";
+
+        make_directory_if_it_does_not_exist("misc/freetype/macos", recursive=true);
+
+        // x64 variant
+        success = build_cpp_static_lib("misc/freetype/macos/ImGui_freetype_x64", ..src_files,
+            extra = .[
+                "-arch", "x86_64", "-std=c++20", "-fno-exceptions", "-fno-rtti", "-fno-threadsafe-statics",
+                macos_x64_version_arg,
+                tprint("-I%", IMGUI_PATH),
+                tprint("-I%", FREETYPE_INCLUDE_PATH),
+                tprint("-I%", join(IMGUI_PATH, "/misc/freetype"))
+            ],
+            debug=compile_debug);
+        assert(success, "build_cpp_static_lib('misc/freetype/macos/ImGui_freetype_x64'");
+
+        // arm64 variant
+        success = build_cpp_static_lib("misc/freetype/macos/ImGui_freetype_arm64", ..src_files,
+            extra = .[
+                "-arch", "arm64", "-std=c++20", "-fno-exceptions", "-fno-rtti", "-fno-threadsafe-statics",
+                macos_arm64_version_arg,
+                tprint("-I%", IMGUI_PATH),
+                tprint("-I%", FREETYPE_INCLUDE_PATH),
+                tprint("-I%", join(IMGUI_PATH, "/misc/freetype"))
+            ],
+            debug=compile_debug);
+        assert(success, "build_cpp_static_lib('misc/freetype/macos/ImGui_freetype_arm64'");
+
+        // create universal binary
+        run_result := run_command("lipo", "-create", "misc/freetype/macos/ImGui_freetype_x64.a", "misc/freetype/macos/ImGui_freetype_arm64.a", "-output", "misc/freetype/macos/ImGui_freetype.a");
+        success = (run_result.exit_code == 0);
+
+    } else {
+        assert(false, "this OS is not supported");
+    }
+
+    if !success return false;
+
+    // Generate bindings
+    output_filename: string;
+    opts: Generate_Bindings_Options;
+    {
+        using opts;
+
+        #if OS == .WINDOWS {
+
+            array_add(*library_search_paths, "misc/freetype/windows");
+            array_add(*libraries, .{filename="ImGui_freetype.static"});
+            output_filename = "misc/freetype/windows/windows_freetype.jai";
+            generate_library_declarations = false;
+
+            footer = #string EOF
+imgui_freetype :: #library,no_dll "ImGui_freetype.static";
+EOF
+
+        } else {
+
+            // "inline" functions are not present in the static library.
+            strip_flags |= .INLINED_FUNCTIONS;
+
+            #if OS == .LINUX {
+                array_add(*library_search_paths, "misc/freetype/linux");
+            } else #if OS == .MACOS {
+
+                array_add(*library_search_paths, "misc/freetype/macos");
+
+                // Same reason as SDL backend — macOS generator sometimes fails to find the lib
+                strip_flags &= ~.SYMBOLS_WITH_UNKNOWN_FOREIGN_LIBS;
+
+            } else {
+                assert(false);
+            }
+
+            array_add(*libraries, .{filename="ImGui_freetype"});
+            output_filename = "misc/freetype/unix_freetype.jai";
+            generate_library_declarations = false;
+
+            footer = #string END
+#if OS == .MACOS imgui_freetype :: #library,no_dll "macos/ImGui_freetype";
+#if OS == .LINUX imgui_freetype :: #library,no_dll "linux/ImGui_freetype";
+END
+        }
+
+        array_add(*include_paths, IMGUI_PATH, join(IMGUI_PATH, "/misc/freetype"), FREETYPE_INCLUDE_PATH);
+        array_add(*source_files,
+            tprint("%/misc/freetype/imgui_freetype.h", IMGUI_PATH)
+        );
+        array_add(*extra_clang_arguments, "-x", "c++", "-DWIN32_LEAN_AND_MEAN");
+        array_add(*strip_prefixes, "ImGui", "Imgui");
+
+        auto_detect_enum_prefixes = false;
+        log_stripped_declarations = false;
+        generate_compile_time_struct_checks = false;
+
+        visitor = imgui_visitor;
+        get_func_args_for_printing = imgui_get_function_arg_for_printing;
+    }
+
+    success = generate_bindings(opts, output_filename);
+
+    // Horrible macOS hack
+    #if OS == .MACOS && false {
+
+        file_path := "misc/freetype/unix_freetype.jai";
+        defer {
+            if !success {
+                log("failed to replace invalid library name from generated MacOS bindings at '%'. You will have to manually replace '#foreign __UnknownLib' and '#elsewhere __UnknownLib' with '#foreign imgui_freetype' and '#elsewhere imgui_freetype'", file_path, flags=.ERROR);
+            }
+        }
+
+        contents, read_ok := read_entire_file(file_path);
+        if read_ok {
+            defer free(contents);
+
+            replace1 := replace(contents, "#foreign __UnknownLib", "#foreign imgui_freetype");
+            defer free(replace1);
+
+            replace2 := replace(replace1, "#elsewhere __UnknownLib", "#elsewhere imgui_freetype");
             defer free(replace2);
 
             success = write_entire_file(file_path, replace2);
