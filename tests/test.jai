@@ -1,4 +1,4 @@
-#import "Sdl3";
+#import "sdl3";
 #import "Basic";
 #import "freetype";
 
